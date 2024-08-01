@@ -2,7 +2,7 @@
 
 # 域名后缀匹配
 DOMAIN-SUFFIX,qichiyu.com
-
+DOMAIN-SUFFIX,googlevideo.com
 # 域名关键字匹配
 DOMAIN-KEYWORD,1e100
 
@@ -13,7 +13,6 @@ IP-CIDR,103.115.43.2/32,no-resolve
 # 国外DNS
 DOMAIN-SUFFIX,dns.google
 DOMAIN-SUFFIX,1dot1dot1dot1.cloudflare-dns.com
-DOMAIN-SUFFIX,googlevideo.com
 DOMAIN-SUFFIX,dot.sb
 DOMAIN-SUFFIX,dns.umbrella.com
 DOMAIN-SUFFIX,dns.quad9.net
