@@ -5,6 +5,7 @@ CONFIG_FILE="$HOME/.stream_config"
 FILES_PER_PAGE=15 # 每页显示的文件数量
 LOG_FILE="stream.log"
 INTERVAL=10 # 推流间隔，秒
+TEMP_FILE="/tmp/streaming_temp_file.tmp" # 临时文件路径
 
 # 支持的视频文件扩展名及说明
 declare -A FILE_TYPES
@@ -94,9 +95,10 @@ load_config() {
 display_and_ask_update() {
   local base_url stream_key
   read -r base_url stream_key <<< "$(parse_rtmp_url "$RTMP_URL")"
+  local formatted_key=$(format_stream_key "$stream_key")
   echo "*** 当前配置 ***"
   echo "RTMP 服务器地址: $base_url"
-  echo "流密钥: $(format_stream_key "$stream_key")"
+  echo "流密钥: $formatted_key"
   echo "视频文件目录: $VIDEO_DIR"
   read -rp "是否要更新配置？(y/n): " update_choice
   if [[ $update_choice =~ ^[yY]$ ]]; then
@@ -128,7 +130,11 @@ get_video_files() {
   
   # 输出找到的文件
   echo "找到的视频文件："
-  printf '%s\n' "${VIDEO_FILES[@]}"
+  for file in "${VIDEO_FILES[@]}"; do
+    local size=$(du -h "$file" | cut -f1)
+    local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file")
+    echo "${file} (大小: $size, 时长: ${duration}s)"
+  done
 }
 
 # 文件类型选择
@@ -160,139 +166,155 @@ select_file_type() {
   done
 }
 
-# 显示视频文件列表并获取用户输入
+# 询问是否自定义排序
+ask_custom_sort() {
+  read -rp "是否要自定义排序？(y/n): " custom_sort
+  if [[ $custom_sort =~ ^[yY]$ ]]; then
+    echo "请选择排序规则："
+    echo "1) 按文件大小排序：大小"
+    echo "2) 按时长排序：时长"
+    echo "3) 手动排序：手动"
+    
+    read -rp "请输入排序规则编号（输入数字）: " sort_choice
+
+    case "$sort_choice" in
+      1)
+        VIDEO_FILES=($(printf '%s\n' "${VIDEO_FILES[@]}" | xargs -I {} sh -c 'du -b "{}" | cut -f1,2 | sort -n | cut -f2-'))
+        ;;
+      2)
+        VIDEO_FILES=($(printf '%s\n' "${VIDEO_FILES[@]}" | xargs -I {} sh -c 'ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "{}" | awk "{print $1 \" {}\"}"' | sort -n | awk '{print $2}'))
+        ;;
+      3)
+        echo "请输入手动排序的文件编号（用逗号分隔）："
+        read -r manual_order
+        local manual_list=($(echo "$manual_order" | tr ',' '\n'))
+        VIDEO_FILES=($(printf '%s\n' "${manual_list[@]}" | xargs -I {} sh -c 'echo "{}"'))
+        ;;
+      *)
+        echo "无效的排序规则，使用默认顺序。"
+        ;;
+    esac
+  fi
+}
+
+
+# 手动排序功能
+manual_sort() {
+  echo "请输入文件编号和排序顺序，用空格分隔（例如 '1 3 2' 表示文件1、文件3、文件2的顺序）："
+  read -r manual_order
+  local ordered_files=()
+  for index in $manual_order; do
+    index=$((index - 1))
+    if ((index >= 0 && index < ${#VIDEO_FILES[@]})); then
+      ordered_files+=("${VIDEO_FILES[$index]}")
+    else
+      echo "无效的文件编号: $((index + 1))"
+    fi
+  done
+  VIDEO_FILES=("${ordered_files[@]}")
+}
+
+# 列出视频文件并选择
 list_and_select_videos() {
   local page=1
-  local total_pages=$(( (${#VIDEO_FILES[@]} + FILES_PER_PAGE - 1) / FILES_PER_PAGE ))
+  local total_pages
+  local num_files=${#VIDEO_FILES[@]}
+  total_pages=$(( (num_files + FILES_PER_PAGE - 1) / FILES_PER_PAGE ))
 
   while true; do
     clear
     echo "可用的视频文件（第 $page 页，共 $total_pages 页）："
-    local start_index=$(( (page-1)*FILES_PER_PAGE ))
-    local end_index=$(( page*FILES_PER_PAGE - 1 ))
-    for ((i=start_index; i<=end_index && i<${#VIDEO_FILES[@]}; i++)); do
-      echo "$((i + 1))) ${VIDEO_FILES[$i]}"
+    
+    local start=$(( (page - 1) * FILES_PER_PAGE ))
+    local end=$(( start + FILES_PER_PAGE - 1 ))
+    end=$(( end < num_files ? end : num_files - 1 ))
+
+    for i in $(seq "$start" "$end"); do
+      local file="${VIDEO_FILES[$i]}"
+      local size=$(du -h "$file" | cut -f1)
+      local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file")
+      echo "$((i + 1))) $file (大小: $size, 时长: ${duration}s)"
     done
-    echo "$(( ${#VIDEO_FILES[@]} + 1 )) 选择所有视频"
-    ((page > 1)) && echo "↑) 上一页"
-    ((page < total_pages)) && echo "↓) 下一页"
-    echo "输入视频文件编号（多个用逗号分隔），按回车确认，或按上下箭头键选择页面："
+    echo "a) 选择所有视频"
+    echo "↑/↓) 上一页/下一页"
+    echo "q) 退出"
 
-    read -r user_input
-
-    if [[ -z "$user_input" ]]; then
-      echo "没有选择任何视频文件。"
-      continue
-    elif [[ "$user_input" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
+    read -rp "输入视频文件编号（多个用逗号分隔），按回车确认，或按上下箭头键选择页面： " user_input
+    if [[ "$user_input" == "q" ]]; then
+      echo "退出程序。"
+      exit 0
+    elif [[ "$user_input" == "a" ]]; then
+      ask_custom_sort
+      SELECTED_FILES=("${VIDEO_FILES[@]}")
+      break
+    elif [[ "$user_input" =~ ^[0-9,]+$ ]]; then
       IFS=',' read -r -a indices <<< "$user_input"
       SELECTED_FILES=()
+      local index
       for index in "${indices[@]}"; do
-        ((index--))
-        if (( index >= 0 && index < ${#VIDEO_FILES[@]} )); then
+        index=$((index - 1))
+        if ((index >= 0 && index < ${#VIDEO_FILES[@]})); then
           SELECTED_FILES+=("${VIDEO_FILES[$index]}")
         else
-          echo "无效的编号 $((index + 1))"
+          echo "无效的文件编号: $((index + 1))"
         fi
       done
-
       if [[ ${#SELECTED_FILES[@]} -eq 0 ]]; then
         echo "没有选择任何有效的视频文件。"
         continue
       fi
-
       break
-    elif (( user_input == ${#VIDEO_FILES[@]} + 1 )); then
-      SELECTED_FILES=("${VIDEO_FILES[@]}")
-      break
+    elif [[ "$user_input" == "↑" && page > 1 ]]; then
+      ((page--))
+    elif [[ "$user_input" == "↓" && page < total_pages ]]; then
+      ((page++))
     else
       echo "无效选择，请重新选择。"
     fi
   done
+}
 
-  # 处理选择后的逻辑
-  if [[ ${#SELECTED_FILES[@]} -eq 1 ]]; then
-    # 只有一个文件时询问是否立即推流
-    while true; do
-      read -rp "只有一个视频文件被选择。是否立即开始推流？(y/n): " start_choice
-      case "$start_choice" in
-        [yY]) ORDERED_FILES=("${SELECTED_FILES[@]}")
-              break ;;
-        [nN]) exit ;;
-        *) echo "无效选择，请输入 'y' 或 'n'。" ;;
-      esac
-    done
-  else
-    # 选择多个文件时询问是否排序
-    while true; do
-      read -rp "是否要自定义推流视频的顺序？(y/n): " order_choice
-      case "$order_choice" in
-        [yY])
-          customize_stream_order
-          break
-          ;;
-        [nN])
-          ORDERED_FILES=("${SELECTED_FILES[@]}")
-          break
-          ;;
-        *)
-          echo "无效选择，请输入 'y' 或 'n'。"
-          ;;
-      esac
-    done
+# 开始推流
+start_streaming() {
+  if [[ ${#SELECTED_FILES[@]} -eq 0 ]]; then
+    echo "没有选择任何文件。"
+    return
+  fi
+
+  local base_url stream_key formatted_key
+  read -r base_url stream_key <<< "$(parse_rtmp_url "$RTMP_URL")"
+  formatted_key=$(format_stream_key "$stream_key")
+  
+  echo "推流地址: ${base_url}/${formatted_key}"
+  echo "开始推流..."
+
+  for file in "${SELECTED_FILES[@]}"; do
+    echo "推流文件: $file"
+    ffmpeg -re -i "$file" -c copy -f flv "${base_url}/${stream_key}" &>> "$LOG_FILE"
+    echo "文件推流完毕，等待 $INTERVAL 秒..."
+    sleep "$INTERVAL"
+  done
+
+  echo "所有文件推流完毕。"
+}
+
+# 清理临时文件
+cleanup() {
+  if [[ -f "$TEMP_FILE" ]]; then
+    rm "$TEMP_FILE"
   fi
 }
 
-# 自定义推流顺序
-customize_stream_order() {
-  echo "当前选择的视频文件："
-  for ((i=0; i<${#SELECTED_FILES[@]}; i++)); do
-    echo "$((i + 1))) ${SELECTED_FILES[$i]}"
-  done
-  
-  while true; do
-    read -rp "请输入视频文件的排序顺序（例如: 2,1,3）: " order
-    IFS=',' read -r -a order_indices <<< "$order"
-    ORDERED_FILES=()
-    for index in "${order_indices[@]}"; do
-      ((index--))
-      if (( index >= 0 && index < ${#SELECTED_FILES[@]} )); then
-        ORDERED_FILES+=("${SELECTED_FILES[$index]}")
-      else
-        echo "无效的编号 $((index + 1))"
-        ORDERED_FILES=()
-        break
-      fi
-    done
-
-    if [[ ${#ORDERED_FILES[@]} -eq ${#SELECTED_FILES[@]} ]]; then
-      break
-    else
-      echo "排序无效，请重新输入。"
-    fi
-  done
+# 主程序
+main() {
+  initialize_config
+  load_config
+  display_and_ask_update
+  select_file_type
+  list_and_select_videos
+  start_streaming
+  cleanup
 }
 
-# 处理推流任务
-process_streaming() {
-  local index=1
-  for video in "${ORDERED_FILES[@]}"; do
-    echo "开始推流视频文件: $video"
-    ffmpeg -re -i "$video" -c:v copy -c:a aac -strict experimental -f flv "$RTMP_URL" >> "$LOG_FILE" 2>&1
-    sleep "$INTERVAL"
-    ((index++))
-  done
-}
-
-# 主脚本执行流程
-initialize_config
-load_config
-display_and_ask_update
-
-# 选择文件类型
-select_file_type
-
-# 列出并选择视频文件
-list_and_select_videos
-
-# 处理推流
-process_streaming
+# 执行主程序
+main
