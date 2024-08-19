@@ -45,16 +45,10 @@ parse_rtmp_url() {
   echo "$stream_key"
 }
 
-# 格式化并隐藏流密钥中间部分
+# 不再隐藏流密钥，直接返回
 format_stream_key() {
   local stream_key="$1"
-  local visible_length=6
-  local hidden_length=$(( ${#stream_key} - 2 * visible_length ))
-  if (( hidden_length > 0 )); then
-    echo "${stream_key:0:$visible_length}***${stream_key: -$visible_length}"
-  else
-    echo "$stream_key"
-  fi
+  echo "$stream_key"
 }
 
 # 询问用户输入并保存配置
@@ -197,7 +191,6 @@ ask_custom_sort() {
   fi
 }
 
-
 # 手动排序功能
 manual_sort() {
   echo "请输入文件编号和排序顺序，用空格分隔（例如 '1 3 2' 表示文件1、文件3、文件2的顺序）："
@@ -274,6 +267,80 @@ list_and_select_videos() {
   done
 }
 
+# 询问是否开始推流
+ask_to_start_streaming() {
+  read -rp "是否立即开始推流？(y/n): " start_streaming
+  if [[ $start_streaming =~ ^[yY]$ ]]; then
+    start_streaming
+  else
+    echo "已取消推流。"
+    exit 0
+  fi
+}
+
+# 在列出视频文件并选择后询问是否开始推流
+list_and_select_videos() {
+  local page=1
+  local total_pages
+  local num_files=${#VIDEO_FILES[@]}
+  total_pages=$(( (num_files + FILES_PER_PAGE - 1) / FILES_PER_PAGE ))
+
+  while true; do
+    clear
+    echo "可用的视频文件（第 $page 页，共 $total_pages 页）："
+    
+    local start=$(( (page - 1) * FILES_PER_PAGE ))
+    local end=$(( start + FILES_PER_PAGE - 1 ))
+    end=$(( end < num_files ? end : num_files - 1 ))
+
+    for i in $(seq "$start" "$end"); do
+      local file="${VIDEO_FILES[$i]}"
+      local size=$(du -h "$file" | cut -f1)
+      local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file")
+      echo "$((i + 1))) $file (大小: $size, 时长: ${duration}s)"
+    done
+    echo "a) 选择所有视频"
+    echo "↑/↓) 上一页/下一页"
+    echo "q) 退出"
+
+    read -rp "输入视频文件编号（多个用逗号分隔），按回车确认，或按上下箭头键选择页面： " user_input
+    if [[ "$user_input" == "q" ]]; then
+      echo "退出程序。"
+      exit 0
+    elif [[ "$user_input" == "a" ]]; then
+      ask_custom_sort
+      SELECTED_FILES=("${VIDEO_FILES[@]}")
+      break
+    elif [[ "$user_input" =~ ^[0-9,]+$ ]]; then
+      IFS=',' read -r -a indices <<< "$user_input"
+      SELECTED_FILES=()
+      local index
+      for index in "${indices[@]}"; do
+        index=$((index - 1))
+        if ((index >= 0 && index < ${#VIDEO_FILES[@]})); then
+          SELECTED_FILES+=("${VIDEO_FILES[$index]}")
+        else
+          echo "无效的文件编号: $((index + 1))"
+        fi
+      done
+      if [[ ${#SELECTED_FILES[@]} -eq 0 ]]; then
+        echo "没有选择任何有效的视频文件。"
+        continue
+      fi
+      break
+    elif [[ "$user_input" == "↑" && page > 1 ]]; then
+      ((page--))
+    elif [[ "$user_input" == "↓" && page < total_pages ]]; then
+      ((page++))
+    else
+      echo "无效选择，请重新选择。"
+    fi
+  done
+
+  # 询问是否立即开始推流
+  ask_to_start_streaming
+}
+
 # 开始推流
 start_streaming() {
   if [[ ${#SELECTED_FILES[@]} -eq 0 ]]; then
@@ -284,19 +351,54 @@ start_streaming() {
   local base_url stream_key formatted_key
   read -r base_url stream_key <<< "$(parse_rtmp_url "$RTMP_URL")"
   formatted_key=$(format_stream_key "$stream_key")
-  
+
   echo "推流地址: ${base_url}/${formatted_key}"
   echo "开始推流..."
 
   for file in "${SELECTED_FILES[@]}"; do
     echo "推流文件: $file"
-    ffmpeg -re -i "$file" -c copy -f flv "${base_url}/${stream_key}" &>> "$LOG_FILE"
+
+    # 临时进度文件
+    local progress_file=$(mktemp)
+    
+    # 开始推流
+    ffmpeg -re -i "$file" -c copy -f flv "${base_url}/${stream_key}" -progress "$progress_file" &>> "$LOG_FILE" &
+    local ffmpeg_pid=$!
+
+    # 显示进度
+    while kill -0 "$ffmpeg_pid" 2>/dev/null; do
+      clear
+      echo "推流文件: $file"
+      if [[ -f "$progress_file" ]]; then
+        # 解析进度文件并计算剩余时间
+        local progress=$(grep "out_time_ms=" "$progress_file" | tail -1)
+        local out_time_ms=$(echo "$progress" | sed 's/out_time_ms=//')
+        local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file")
+        local duration_ms=$(echo "$duration * 1000" | bc | awk '{print int($1)}')
+        
+        local elapsed_ms=$out_time_ms
+        local remaining_ms=$((duration_ms - elapsed_ms))
+
+        local elapsed=$(printf "%02d:%02d:%02d" $((elapsed_ms / 3600000)) $(( (elapsed_ms % 3600000) / 60000)) $(( (elapsed_ms % 60000) / 1000)))
+        local remaining=$(printf "%02d:%02d:%02d" $((remaining_ms / 3600000)) $(( (remaining_ms % 3600000) / 60000)) $(( (remaining_ms % 60000) / 1000)))
+        
+        echo "已推流: $elapsed"
+        echo "剩余时间: $remaining"
+      fi
+      sleep 1
+    done
+    
+    # 清理进度文件
+    rm "$progress_file"
+
     echo "文件推流完毕，等待 $INTERVAL 秒..."
     sleep "$INTERVAL"
   done
 
   echo "所有文件推流完毕。"
 }
+
+
 
 # 清理临时文件
 cleanup() {
