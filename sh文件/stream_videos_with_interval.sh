@@ -100,8 +100,14 @@ display_and_ask_update() {
   echo "视频文件目录: $VIDEO_DIR"
   read -rp "是否要更新配置？(y/n): " update_choice
   if [[ $update_choice =~ ^[yY]$ ]]; then
-    prompt_and_save_config "请输入新的 RTMP 服务器地址和流密钥" "RTMP_URL" "$RTMP_URL"
-    prompt_and_save_config "请输入新的视频文件目录" "VIDEO_DIR" "$VIDEO_DIR"
+    # 分开输入 RTMP 服务器地址和流密钥
+    read -rp "请输入新的 RTMP 服务器地址: " new_base_url
+    read -rp "请输入新的流密钥: " new_stream_key
+    set_config_value "RTMP_URL" "$new_base_url/$new_stream_key"
+    
+    read -rp "请输入新的视频文件目录: " new_video_dir
+    set_config_value "VIDEO_DIR" "$new_video_dir"
+    
     load_config
   fi
 }
@@ -175,6 +181,7 @@ list_and_select_videos() {
     read -r user_input
 
     if [[ -z "$user_input" ]]; then
+      echo "没有选择任何视频文件。"
       continue
     elif [[ "$user_input" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
       IFS=',' read -r -a indices <<< "$user_input"
@@ -187,6 +194,12 @@ list_and_select_videos() {
           echo "无效的编号 $((index + 1))"
         fi
       done
+
+      if [[ ${#SELECTED_FILES[@]} -eq 0 ]]; then
+        echo "没有选择任何有效的视频文件。"
+        continue
+      fi
+
       break
     elif (( user_input == ${#VIDEO_FILES[@]} + 1 )); then
       SELECTED_FILES=("${VIDEO_FILES[@]}")
@@ -229,43 +242,57 @@ list_and_select_videos() {
   fi
 }
 
-# 自定义推流视频的顺序
+# 自定义推流顺序
 customize_stream_order() {
-  echo "请输入视频文件编号（多个用逗号分隔），按 Enter 确认："
+  echo "当前选择的视频文件："
+  for ((i=0; i<${#SELECTED_FILES[@]}; i++)); do
+    echo "$((i + 1))) ${SELECTED_FILES[$i]}"
+  done
+  
   while true; do
-    read -r order_input
-    IFS=',' read -r -a ordered_indices <<< "$order_input"
+    read -rp "请输入视频文件的排序顺序（例如: 2,1,3）: " order
+    IFS=',' read -r -a order_indices <<< "$order"
     ORDERED_FILES=()
-    for index in "${ordered_indices[@]}"; do
+    for index in "${order_indices[@]}"; do
       ((index--))
       if (( index >= 0 && index < ${#SELECTED_FILES[@]} )); then
         ORDERED_FILES+=("${SELECTED_FILES[$index]}")
       else
         echo "无效的编号 $((index + 1))"
+        ORDERED_FILES=()
+        break
       fi
     done
-    [[ ${#ORDERED_FILES[@]} -gt 0 ]] && break
+
+    if [[ ${#ORDERED_FILES[@]} -eq ${#SELECTED_FILES[@]} ]]; then
+      break
+    else
+      echo "排序无效，请重新输入。"
+    fi
   done
 }
 
-# 执行推流
-stream_videos() {
-  for file in "${ORDERED_FILES[@]}"; do
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - 正在推流: $file" >> "$LOG_FILE"
-    ffmpeg -re -i "$file" -c:v copy -c:a copy -f flv "$RTMP_URL"
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - 完成推流: $file" >> "$LOG_FILE"
+# 处理推流任务
+process_streaming() {
+  local index=1
+  for video in "${ORDERED_FILES[@]}"; do
+    echo "开始推流视频文件: $video"
+    ffmpeg -re -i "$video" -c:v copy -c:a aac -strict experimental -f flv "$RTMP_URL" >> "$LOG_FILE" 2>&1
     sleep "$INTERVAL"
+    ((index++))
   done
 }
 
-# 主函数
-main() {
-  initialize_config
-  load_config
-  display_and_ask_update
-  select_file_type
-  list_and_select_videos
-  stream_videos
-}
+# 主脚本执行流程
+initialize_config
+load_config
+display_and_ask_update
 
-main
+# 选择文件类型
+select_file_type
+
+# 列出并选择视频文件
+list_and_select_videos
+
+# 处理推流
+process_streaming
