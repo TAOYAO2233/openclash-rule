@@ -2,10 +2,11 @@
 
 # 配置文件路径
 CONFIG_FILE="$HOME/.stream_config"
-FILES_PER_PAGE=15 # 每页显示的文件数量
-LOG_FILE="stream.log"
+FILES_PER_PAGE=10 # 每页显示的文件数量
+LOG_DIR="/var/log/stream_logs/"
+LOG_FILE="${LOG_DIR}stream_log_$(date +'%Y%m%d_%H%M%S').log"
 INTERVAL=10 # 推流间隔，秒
-TEMP_FILE="/tmp/streaming_temp_file.tmp" # 临时文件路径
+LOOP=false # 是否循环推流
 
 # 支持的视频文件扩展名及说明
 declare -A FILE_TYPES
@@ -18,6 +19,15 @@ FILE_TYPES=(
   [wmv]="WMV (.wmv) - 微软开发的视频格式，通常用于Windows平台。"
   [webm]="WebM (.webm) - 开放格式，专为Web视频流媒体设计，支持现代浏览器。"
 )
+
+# RTMP 服务器地址和流密钥
+RTMP_URL=""
+
+# 视频文件目录
+VIDEO_DIR=""
+
+# 创建日志目录（如果不存在）
+mkdir -p "$LOG_DIR"
 
 # 获取配置值的函数
 get_config_value() {
@@ -33,38 +43,6 @@ set_config_value() {
     sed -i "s|^$key=.*|$key=$value|" "$CONFIG_FILE"
   else
     echo "$key=$value" >> "$CONFIG_FILE"
-  fi
-}
-
-# 分割 RTMP 地址和流密钥
-parse_rtmp_url() {
-  local url="$1"
-  local base_url=$(echo "$url" | sed 's:/[^/]*$::')
-  local stream_key=$(echo "$url" | awk -F'/' '{print $NF}')
-  echo "$base_url"
-  echo "$stream_key"
-}
-
-# 不再隐藏流密钥，直接返回
-format_stream_key() {
-  local stream_key="$1"
-  echo "$stream_key"
-}
-
-# 询问用户输入并保存配置
-prompt_and_save_config() {
-  local prompt_message="$1"
-  local key="$2"
-  local current_value="$3"
-
-  local base_url stream_key
-  read -r base_url stream_key <<< "$(parse_rtmp_url "$current_value")"
-  
-  local formatted_key=$(format_stream_key "$stream_key")
-  read -rp "$prompt_message (当前值: $base_url/$formatted_key): " new_value
-  
-  if [[ -n "$new_value" ]]; then
-    set_config_value "$key" "$new_value"
   fi
 }
 
@@ -87,16 +65,15 @@ load_config() {
 
 # 显示当前配置并询问是否更新
 display_and_ask_update() {
-  local base_url stream_key
+  local base_url stream_key formatted_key
   read -r base_url stream_key <<< "$(parse_rtmp_url "$RTMP_URL")"
-  local formatted_key=$(format_stream_key "$stream_key")
+  formatted_key=$(format_stream_key "$stream_key")
   echo "*** 当前配置 ***"
   echo "RTMP 服务器地址: $base_url"
   echo "流密钥: $formatted_key"
   echo "视频文件目录: $VIDEO_DIR"
   read -rp "是否要更新配置？(y/n): " update_choice
   if [[ $update_choice =~ ^[yY]$ ]]; then
-    # 分开输入 RTMP 服务器地址和流密钥
     read -rp "请输入新的 RTMP 服务器地址: " new_base_url
     read -rp "请输入新的流密钥: " new_stream_key
     set_config_value "RTMP_URL" "$new_base_url/$new_stream_key"
@@ -108,6 +85,21 @@ display_and_ask_update() {
   fi
 }
 
+# 分割 RTMP 地址和流密钥
+parse_rtmp_url() {
+  local url="$1"
+  local base_url=$(echo "$url" | sed 's:/[^/]*$::')
+  local stream_key=$(echo "$url" | awk -F'/' '{print $NF}')
+  echo "$base_url"
+  echo "$stream_key"
+}
+
+# 不再隐藏流密钥，直接返回
+format_stream_key() {
+  local stream_key="$1"
+  echo "$stream_key"
+}
+
 # 获取视频文件
 get_video_files() {
   local selected_ext="$1"
@@ -116,19 +108,7 @@ get_video_files() {
     ext_pattern="*.{mp4,flv,mkv,avi,mov,wmv,webm}"
   fi
 
-  # 输出调试信息
-  echo "查找文件模式: $ext_pattern"
-  echo "视频文件目录: $VIDEO_DIR"
-
   mapfile -t VIDEO_FILES < <(find "$VIDEO_DIR" -type f \( -name "*.mp4" -o -name "*.flv" -o -name "*.mkv" -o -name "*.avi" -o -name "*.mov" -o -name "*.wmv" -o -name "*.webm" \))
-  
-  # 输出找到的文件
-  echo "找到的视频文件："
-  for file in "${VIDEO_FILES[@]}"; do
-    local size=$(du -h "$file" | cut -f1)
-    local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file")
-    echo "${file} (大小: $size, 时长: ${duration}s)"
-  done
 }
 
 # 文件类型选择
@@ -142,8 +122,12 @@ select_file_type() {
   echo "$index) 全部选择"
   
   while true; do
-    read -rp "请选择文件类型（输入数字）: " choice
-    if [[ $choice =~ ^[0-9]+$ ]]; then
+    read -rp "请选择文件类型（输入数字，回车默认全部选择）: " choice
+    if [[ -z $choice ]]; then
+      # 没有输入，默认选择全部
+      get_video_files "all"
+      break
+    elif [[ $choice =~ ^[0-9]+$ ]]; then
       if (( choice == index )); then
         get_video_files "all"
         break
@@ -160,54 +144,8 @@ select_file_type() {
   done
 }
 
-# 询问是否自定义排序
-ask_custom_sort() {
-  read -rp "是否要自定义排序？(y/n): " custom_sort
-  if [[ $custom_sort =~ ^[yY]$ ]]; then
-    echo "请选择排序规则："
-    echo "1) 按文件大小排序：大小"
-    echo "2) 按时长排序：时长"
-    echo "3) 手动排序：手动"
-    
-    read -rp "请输入排序规则编号（输入数字）: " sort_choice
 
-    case "$sort_choice" in
-      1)
-        VIDEO_FILES=($(printf '%s\n' "${VIDEO_FILES[@]}" | xargs -I {} sh -c 'du -b "{}" | cut -f1,2 | sort -n | cut -f2-'))
-        ;;
-      2)
-        VIDEO_FILES=($(printf '%s\n' "${VIDEO_FILES[@]}" | xargs -I {} sh -c 'ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "{}" | awk "{print $1 \" {}\"}"' | sort -n | awk '{print $2}'))
-        ;;
-      3)
-        echo "请输入手动排序的文件编号（用逗号分隔）："
-        read -r manual_order
-        local manual_list=($(echo "$manual_order" | tr ',' '\n'))
-        VIDEO_FILES=($(printf '%s\n' "${manual_list[@]}" | xargs -I {} sh -c 'echo "{}"'))
-        ;;
-      *)
-        echo "无效的排序规则，使用默认顺序。"
-        ;;
-    esac
-  fi
-}
-
-# 手动排序功能
-manual_sort() {
-  echo "请输入文件编号和排序顺序，用空格分隔（例如 '1 3 2' 表示文件1、文件3、文件2的顺序）："
-  read -r manual_order
-  local ordered_files=()
-  for index in $manual_order; do
-    index=$((index - 1))
-    if ((index >= 0 && index < ${#VIDEO_FILES[@]})); then
-      ordered_files+=("${VIDEO_FILES[$index]}")
-    else
-      echo "无效的文件编号: $((index + 1))"
-    fi
-  done
-  VIDEO_FILES=("${ordered_files[@]}")
-}
-
-# 列出视频文件并选择
+# 显示视频文件列表并获取用户输入
 list_and_select_videos() {
   local page=1
   local total_pages
@@ -225,7 +163,7 @@ list_and_select_videos() {
     for i in $(seq "$start" "$end"); do
       local file="${VIDEO_FILES[$i]}"
       local size=$(du -h "$file" | cut -f1)
-      local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file")
+      local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file" | awk '{printf "%d", $1}')
       echo "$((i + 1))) $file (大小: $size, 时长: ${duration}s)"
     done
     echo "a) 选择所有视频"
@@ -237,78 +175,6 @@ list_and_select_videos() {
       echo "退出程序。"
       exit 0
     elif [[ "$user_input" == "a" ]]; then
-      ask_custom_sort
-      SELECTED_FILES=("${VIDEO_FILES[@]}")
-      break
-    elif [[ "$user_input" =~ ^[0-9,]+$ ]]; then
-      IFS=',' read -r -a indices <<< "$user_input"
-      SELECTED_FILES=()
-      local index
-      for index in "${indices[@]}"; do
-        index=$((index - 1))
-        if ((index >= 0 && index < ${#VIDEO_FILES[@]})); then
-          SELECTED_FILES+=("${VIDEO_FILES[$index]}")
-        else
-          echo "无效的文件编号: $((index + 1))"
-        fi
-      done
-      if [[ ${#SELECTED_FILES[@]} -eq 0 ]]; then
-        echo "没有选择任何有效的视频文件。"
-        continue
-      fi
-      break
-    elif [[ "$user_input" == "↑" && page > 1 ]]; then
-      ((page--))
-    elif [[ "$user_input" == "↓" && page < total_pages ]]; then
-      ((page++))
-    else
-      echo "无效选择，请重新选择。"
-    fi
-  done
-}
-
-# 询问是否开始推流
-ask_to_start_streaming() {
-  read -rp "是否立即开始推流？(y/n): " start_streaming
-  if [[ $start_streaming =~ ^[yY]$ ]]; then
-    start_streaming
-  else
-    echo "已取消推流。"
-    exit 0
-  fi
-}
-
-# 在列出视频文件并选择后询问是否开始推流
-list_and_select_videos() {
-  local page=1
-  local total_pages
-  local num_files=${#VIDEO_FILES[@]}
-  total_pages=$(( (num_files + FILES_PER_PAGE - 1) / FILES_PER_PAGE ))
-
-  while true; do
-    clear
-    echo "可用的视频文件（第 $page 页，共 $total_pages 页）："
-    
-    local start=$(( (page - 1) * FILES_PER_PAGE ))
-    local end=$(( start + FILES_PER_PAGE - 1 ))
-    end=$(( end < num_files ? end : num_files - 1 ))
-
-    for i in $(seq "$start" "$end"); do
-      local file="${VIDEO_FILES[$i]}"
-      local size=$(du -h "$file" | cut -f1)
-      local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file")
-      echo "$((i + 1))) $file (大小: $size, 时长: ${duration}s)"
-    done
-    echo "a) 选择所有视频"
-    echo "↑/↓) 上一页/下一页"
-    echo "q) 退出"
-
-    read -rp "输入视频文件编号（多个用逗号分隔），按回车确认，或按上下箭头键选择页面： " user_input
-    if [[ "$user_input" == "q" ]]; then
-      echo "退出程序。"
-      exit 0
-    elif [[ "$user_input" == "a" ]]; then
-      ask_custom_sort
       SELECTED_FILES=("${VIDEO_FILES[@]}")
       break
     elif [[ "$user_input" =~ ^[0-9,]+$ ]]; then
@@ -337,86 +203,94 @@ list_and_select_videos() {
     fi
   done
 
-  # 询问是否立即开始推流
-  ask_to_start_streaming
+  if [[ ${#SELECTED_FILES[@]} -gt 1 ]]; then
+    read -rp "是否自定义排序？(y/n): " sort_choice
+    if [[ $sort_choice =~ ^[yY]$ ]]; then
+      echo "请输入自定义排序的文件编号，用逗号分隔："
+      read -rp "输入文件编号（例如：1,3,2）： " custom_sort
+      IFS=',' read -r -a sorted_indices <<< "$custom_sort"
+      SELECTED_FILES=()
+      for index in "${sorted_indices[@]}"; do
+        index=$((index - 1))
+        if ((index >= 0 && index < ${#VIDEO_FILES[@]})); then
+          SELECTED_FILES+=("${VIDEO_FILES[$index]}")
+        else
+          echo "无效的文件编号: $((index + 1))"
+        fi
+      done
+    fi
+  fi
 }
 
-# 开始推流
-start_streaming() {
-  if [[ ${#SELECTED_FILES[@]} -eq 0 ]]; then
-    echo "没有选择任何文件。"
-    return
+# 询问是否循环推流
+ask_loop() {
+  read -rp "是否要循环推流？(y/n): " loop_choice
+  if [[ $loop_choice =~ ^[yY]$ ]]; then
+    LOOP=true
+  fi
+}
+
+# 推流视频函数
+stream_videos() {
+  local file_index=1
+  local total_files=${#SELECTED_FILES[@]}
+  if [[ $total_files -eq 0 ]]; then
+    echo "没有选择任何视频文件，退出程序。" | tee -a "$LOG_FILE"
+    exit 1
   fi
 
-  local base_url stream_key formatted_key
-  read -r base_url stream_key <<< "$(parse_rtmp_url "$RTMP_URL")"
-  formatted_key=$(format_stream_key "$stream_key")
-
-  echo "推流地址: ${base_url}/${formatted_key}"
-  echo "开始推流..."
-
-  for file in "${SELECTED_FILES[@]}"; do
-    echo "推流文件: $file"
-
-    # 临时进度文件
-    local progress_file=$(mktemp)
-    
-    # 开始推流
-    ffmpeg -re -i "$file" -c copy -f flv "${base_url}/${stream_key}" -progress "$progress_file" &>> "$LOG_FILE" &
-    local ffmpeg_pid=$!
-
-    # 显示进度
-    while kill -0 "$ffmpeg_pid" 2>/dev/null; do
-      clear
-      echo "推流文件: $file"
-      if [[ -f "$progress_file" ]]; then
-        # 解析进度文件并计算剩余时间
-        local progress=$(grep "out_time_ms=" "$progress_file" | tail -1)
-        local out_time_ms=$(echo "$progress" | sed 's/out_time_ms=//')
-        local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file")
-        local duration_ms=$(echo "$duration * 1000" | bc | awk '{print int($1)}')
-        
-        local elapsed_ms=$out_time_ms
-        local remaining_ms=$((duration_ms - elapsed_ms))
-
-        local elapsed=$(printf "%02d:%02d:%02d" $((elapsed_ms / 3600000)) $(( (elapsed_ms % 3600000) / 60000)) $(( (elapsed_ms % 60000) / 1000)))
-        local remaining=$(printf "%02d:%02d:%02d" $((remaining_ms / 3600000)) $(( (remaining_ms % 3600000) / 60000)) $(( (remaining_ms % 60000) / 1000)))
-        
-        echo "已推流: $elapsed"
-        echo "剩余时间: $remaining"
-      fi
-      sleep 1
+  while [[ $LOOP == true || $file_index -le $total_files ]]; do
+    for video in "${SELECTED_FILES[@]}"; do
+      local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$video" | awk '{printf "%d", $1}')
+      local duration_formatted=$(printf '%02d:%02d:%02d' $((duration/3600)) $(((duration%3600)/60)) $((duration%60)))
+      
+      echo "开始推流视频: $video (进度: $file_index/$total_files, 时长: $duration_formatted)" | tee -a "$LOG_FILE"
+      
+      # 创建一个临时文件用于存储进度信息
+      local progress_file=$(mktemp)
+      
+      # 推流并输出进度到临时文件
+      ffmpeg -re -i "$video" -c:v libx264 -preset fast -b:v 1500k -c:a aac -b:a 128k -f flv "$RTMP_URL" -progress "$progress_file" 2>> "$LOG_FILE" &
+      
+      # 获取进程ID
+      local ffmpeg_pid=$!
+      
+      # 实时读取并显示进度
+      while kill -0 $ffmpeg_pid 2>/dev/null; do
+        if [[ -f $progress_file ]]; then
+          local progress=$(grep -E '^out_time_ms=' "$progress_file" | tail -1)
+          if [[ -n $progress ]]; then
+            local out_time_ms=$(echo "$progress" | cut -d'=' -f2)
+            local out_time_sec=$((out_time_ms / 1000000))
+            local elapsed_formatted=$(printf '%02d:%02d:%02d' $((out_time_sec/3600)) $(((out_time_sec%3600)/60)) $((out_time_sec%60)))
+            local remaining_sec=$((duration - out_time_sec))
+            local remaining_formatted=$(printf '%02d:%02d:%02d' $((remaining_sec/3600)) $(((remaining_sec%3600)/60)) $((remaining_sec%60)))
+            echo -ne "\r推流进度: $elapsed_formatted / $duration_formatted (剩余: $remaining_formatted)"
+          fi
+        fi
+        sleep 1
+      done
+      
+      # 删除临时文件
+      rm -f "$progress_file"
+      
+      echo "" # 换行
+      echo "完成推流视频: $video (进度: $file_index/$total_files)" | tee -a "$LOG_FILE"
+      sleep "$INTERVAL"
+      ((file_index++))
     done
-    
-    # 清理进度文件
-    rm "$progress_file"
-
-    echo "文件推流完毕，等待 $INTERVAL 秒..."
-    sleep "$INTERVAL"
+    if [[ $LOOP == false ]]; then
+      break
+    fi
   done
-
-  echo "所有文件推流完毕。"
 }
 
-
-
-# 清理临时文件
-cleanup() {
-  if [[ -f "$TEMP_FILE" ]]; then
-    rm "$TEMP_FILE"
-  fi
-}
 
 # 主程序
-main() {
-  initialize_config
-  load_config
-  display_and_ask_update
-  select_file_type
-  list_and_select_videos
-  start_streaming
-  cleanup
-}
-
-# 执行主程序
-main
+initialize_config
+load_config
+display_and_ask_update
+select_file_type
+list_and_select_videos
+ask_loop
+stream_videos
