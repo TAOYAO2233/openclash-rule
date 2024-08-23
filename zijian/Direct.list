@@ -3,14 +3,12 @@
 # MyList
 # 域名后缀匹配
 DOMAIN-SUFFIX,time.windows.com
-DOMAIN-SUFFIX,anime.girigirilove.com
 DOMAIN-SUFFIX,girigirilove.com
 DOMAIN-SUFFIX,lanzov.com
 DOMAIN-SUFFIX,hao123.com
 
 # 域名关键字匹配
 DOMAIN-KEYWORD,baidu
-DOMAIN-KEYWORD,girigirilove
 
 # IP段匹配
 IP-CIDR,219.146.1.66/32,no-resolve
