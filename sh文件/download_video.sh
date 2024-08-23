@@ -65,8 +65,16 @@ yt-dlp -F "$video_url"
 echo -e "${BLUE}$divider${NC}"
 
 # 选择格式
-read -p "请输入你要下载的格式代码（如：22）: " format_code
+read -p "请输入你要下载的格式代码（如：22），或者直接回车选择默认最佳画质和音质: " format_code
 echo -e "$divider"
+
+# 如果用户没有输入格式代码，默认选择最佳视频和音频并合并为MP4格式
+if [ -z "$format_code" ]; then
+    format_code="bv*+ba"  # 最佳视频和最佳音频组合
+    merge_format="--merge-output-format mp4"
+else
+    merge_format=""
+fi
 
 # 提供下载文件夹的选项
 while true; do
@@ -133,7 +141,7 @@ fi
 
 # 下载视频到指定文件夹
 echo -e "${GREEN}开始下载...${NC}"
-# 使用 yt-dlp 的进度条显示下载进度
-yt-dlp -f "$format_code" -o "$download_dir/%(title)s.%(ext)s" --progress "$video_url"
+# 使用 yt-dlp 的进度条显示下载进度，并根据需要合并格式
+yt-dlp -f "$format_code" -o "$download_dir/%(title)s.%(ext)s" --progress "$video_url" $merge_format
 
 echo -e "${GREEN}视频下载完成！已保存至 $download_dir${NC}"
