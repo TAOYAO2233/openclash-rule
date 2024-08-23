@@ -273,7 +273,7 @@ stream_videos() {
       local progress_file=$(mktemp)
       
       # 推流并输出进度到临时文件
-      ffmpeg -re -i "$video" -c:v libx264 -preset fast -b:v 1500k -c:a aac -b:a 128k -f flv "$RTMP_URL" -progress "$progress_file" 2>> "$LOG_FILE" &
+      ffmpeg -re -i "$video" -c copy -f flv "$RTMP_URL" -progress "$progress_file" 2>> "$LOG_FILE" &
       
       # 获取进程ID
       local ffmpeg_pid=$!
@@ -307,6 +307,7 @@ stream_videos() {
     fi
   done
 }
+
 
 
 # 主程序部分调用缓存函数
