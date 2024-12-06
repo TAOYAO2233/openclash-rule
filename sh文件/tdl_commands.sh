@@ -17,8 +17,8 @@ do
   fi
 
   # 导出命令
-  output_file="/storage1024/docker/alist/TDL/tdl-export${counter}.json"
-  tdl chat export -c 1626266448 -o ${output_file} -i $start,$end --all --pool 0 #1TB(jav高清)
+  output_file="/home/tdl/tdl-export${counter}.json"
+  tdl chat export -c 1535430443 -o ${output_file} -i $start,$end --all --pool 0 #1TB(jav高清)
 
 
 #1626266448 为频道ID(jav高清)
