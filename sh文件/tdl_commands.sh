@@ -18,10 +18,10 @@ do
 
   # 导出命令
   output_file="/home/tdl/tdl-export${counter}.json"
-  tdl chat export -c 1535430443 -o ${output_file} -i $start,$end --all --pool 0 #1TB(jav高清)
+  tdl chat export -c 1586431363 -o ${output_file} -i $start,$end --all --pool 0 #1TB(jav高清)
 
 
-#1626266448 为频道ID(jav高清)
+#1586431363 为频道ID(jav高清)
   # 更新起始时间戳
   start=$end
   # 递增计数器
