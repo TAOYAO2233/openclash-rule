@@ -19,7 +19,7 @@ process_file() {
   local file="$1"
 
   # 顺序执行 tdl forward 命令
-  if tdl forward --from "$file" --to https://t.me/jxudgdv --desc --reconnect-timeout 0; then
+  if tdl forward --from "$file" --to https://t.me/jxudgdv --desc --reconnect-timeout 0 --delay 5s --pool 0; then
     echo "$(timestamp) - Successfully forwarded: $file" >> "$success_log"
   else
     echo "$(timestamp) - Failed to forward: $file" >> "$error_log"
