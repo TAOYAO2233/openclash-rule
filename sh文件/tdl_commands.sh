@@ -49,32 +49,43 @@ if ! grep -q "$channel_id" "$chat_list_file"; then
   exit 1
 fi
 
-# 配置默认的起始和截止时间
-default_start="2024-01-10 20:00:00"
-default_end="2024-11-30 00:00:00"
+# 配置时间模式
+echo "请选择时间模式："
+echo "1. 使用默认的起始时间和截止时间"
+echo "2. 使用当前时间为起始时间，并设定结束时间"
+read -p "输入选项（1或2）: " time_mode
+
+# 配置时间参数
+case "$time_mode" in
+  1)
+    # 使用默认时间
+    default_start="2024-01-10 20:00:00"
+    default_end="2024-11-30 00:00:00"
+    start=$(date -d "$default_start" +%s)
+    end_timestamp=$(date -d "$default_end" +%s)
+    ;;
+  2)
+    # 使用当前时间为起始时间
+    start=$(date +%s)
+    read -p "请输入未来的时间间隔（单位：天）： " days
+    end_timestamp=$((start + days * 24 * 60 * 60))
+    ;;
+  *)
+    echo "无效选项，请重新运行脚本。"
+    exit 1
+    ;;
+esac
+
+# 输出时间范围和频道信息
+echo "频道 ID：$channel_id"
+echo "起始时间：$(date -d @$start '+%Y-%m-%d %H:%M:%S')"
+echo "截止时间：$(date -d @$end_timestamp '+%Y-%m-%d %H:%M:%S')"
 
 # 间隔两个月的秒数
 interval=$((60 * 24 * 60 * 60))
 
 # 文件计数器
 counter=1
-
-# 判断是否使用给定时间还是当前时间
-use_current_time=false
-if [ "$use_current_time" = true ]; then
-  # 使用当前时间作为起始时间
-  start=$(date +%s)
-  end_timestamp=$((start + interval))
-else
-  # 使用默认的给定时间作为起始和截止时间
-  start=$(date -d "$default_start" +%s)
-  end_timestamp=$(date -d "$default_end" +%s)
-fi
-
-# 输出时间范围和频道信息
-echo "频道 ID：$channel_id"
-echo "起始时间：$(date -d @$start '+%Y-%m-%d %H:%M:%S')"
-echo "截止时间：$(date -d @$end_timestamp '+%Y-%m-%d %H:%M:%S')"
 
 # 循环直到起始时间超过截止时间
 while [ $start -lt $end_timestamp ]
