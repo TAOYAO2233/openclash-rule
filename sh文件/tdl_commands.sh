@@ -52,7 +52,7 @@ fi
 # 配置时间模式
 echo "请选择时间模式："
 echo "1. 使用默认的起始时间和截止时间"
-echo "2. 使用当前时间为起始时间，并设定结束时间"
+echo "2. 自定义起始时间和截止时间"
 read -p "输入选项（1或2）: " time_mode
 
 # 配置时间参数
@@ -65,10 +65,11 @@ case "$time_mode" in
     end_timestamp=$(date -d "$default_end" +%s)
     ;;
   2)
-    # 使用当前时间为起始时间
-    start=$(date +%s)
-    read -p "请输入未来的时间间隔（单位：天）： " days
-    end_timestamp=$((start + days * 24 * 60 * 60))
+    # 自定义起始时间和截止时间
+    read -p "请输入起始时间（格式：YYYY-MM-DD HH:MM:SS）: " custom_start
+    read -p "请输入截止时间（格式：YYYY-MM-DD HH:MM:SS）: " custom_end
+    start=$(date -d "$custom_start" +%s)
+    end_timestamp=$(date -d "$custom_end" +%s)
     ;;
   *)
     echo "无效选项，请重新运行脚本。"
