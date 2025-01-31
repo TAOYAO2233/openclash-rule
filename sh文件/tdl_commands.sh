@@ -17,10 +17,10 @@ start_timestamp=$(date_to_timestamp "$default_start")
 end_timestamp=$(date_to_timestamp "$default_end")
 
 # 选择时间
-echo "请选择时间选项："
 echo "1. 使用默认时间（$default_start 到 $default_end）"
 echo "2. 使用默认起始时间（$default_start），自定义截止时间"
 echo "3. 自定义起始时间和截止时间"
+echo "请选择时间选项："
 read time_choice
 
 case $time_choice in
