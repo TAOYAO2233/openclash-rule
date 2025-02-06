@@ -14,6 +14,12 @@ DOMAIN-KEYWORD,girigirilove
 # IP段匹配
 IP-CIDR,219.146.1.66/32,no-resolve
 IP-CIDR,192.210.133.33/32,no-resolve
+IP-CIDR,23.95.240.120/32,no-resolve
+IP-CIDR,142.171.176.130/32,no-resolve
+IP-CIDR,23.94.43.151/32,no-resolve
+IP-CIDR,205.185.124.21/32,no-resolve
+IP-CIDR,23.95.240.189/32,no-resolve
+IP-CIDR,154.9.246.133/32,no-resolve
 
 # 国内DNS
 DOMAIN-SUFFIX,dns.alidns.com
