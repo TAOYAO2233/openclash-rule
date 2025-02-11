@@ -7,10 +7,11 @@ DOMAIN-SUFFIX,girigirilove.com
 DOMAIN-SUFFIX,lanzov.com
 DOMAIN-SUFFIX,hao123.com
 DOMAIN-SUFFIX,hltv.org
-
+DOMAIN-SUFFIX,my.frantech.ca
 # 域名关键字匹配
 DOMAIN-KEYWORD,baidu
 DOMAIN-KEYWORD,girigirilove
+
 # IP段匹配
 IP-CIDR,219.146.1.66/32,no-resolve
 IP-CIDR,192.210.133.33/32,no-resolve
