@@ -116,7 +116,7 @@ proxy-groups:
   - {name: 🟢 直连, type: select, proxies: [DIRECT]}
   - {name: 🎯 全球直连, type: select, proxies: [🟢 直连, 🚀 节点选择]}
   - {name: 🐟 漏网之鱼,!!merge <<: *pr}
-  - {name: 🛫 前置节点, type: select, include-all: true}
+  - {name: 🛫 前置节点, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, 🔯 香港故转]}
   - {name: 🚄 中转节点, type: select, include-all: true}
   - {name: 🛬 落地节点, type: select, include-all: true}
   - {name: 🇭🇰 香港节点, type: select, include-all: true, filter: "(?i)港|hk|hongkong|hong kong"}
@@ -131,6 +131,7 @@ proxy-groups:
   - {name: 🌐 全部节点, type: select, include-all: true}
 rules:
   - RULE-SET,private_domain,🟢 直连
+  - RULE-SET,zijiandirect,🟢 直连
   - RULE-SET,apple_domain,🍎 Apple
   - RULE-SET,proxylite,🚀 节点选择
   - RULE-SET,ai,🤖 ChatGPT
@@ -157,7 +158,8 @@ rule-anchor:
   class: &class {type: http, interval: 86400, behavior: classical, format: text}
 rule-providers: 
   private_domain: {!!merge <<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"}
-  proxylite: {!!merge <<: *class, url: "https://raw.githubusercontent.com/qichiyuhub/rule/refs/heads/master/ProxyLite.list"}
+  zijiandirect: {!!merge <<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/Direct.list"}
+  proxylite: {!!merge <<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/ProxyLite.list"}
   ai: { <<: *domain, url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs" }
   youtube_domain: {!!merge <<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}
   google_domain: {!!merge <<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"}
