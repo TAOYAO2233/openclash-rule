@@ -89,10 +89,10 @@ dns:
     - 119.29.29.29
  
    
-proxies:
-- name: "🟢 直连"
-  type: direct
-  udp: true
+#proxies:
+#  - name: "🟢 直连"
+#    type: direct
+#    udp: true
  
 # 锚点
 pr: &pr {type: select, proxies: [🚀 节点选择, 🔗 链式代理主, 🔗 链式代理副, 🛫 前置节点, 🚄 中转节点, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🟢 直连]}
@@ -113,6 +113,7 @@ proxy-groups:
   - {name: ✈️ Speedtest,!!merge <<: *pr}
   - {name: 💶 PayPal,!!merge <<: *pr}
   - {name: 🍎 Apple, type: select, proxies: [🟢 直连, 🚀 节点选择]}
+  - {name: 🟢 直连, type: select, proxies: [DIRECT]}
   - {name: 🎯 全球直连, type: select, proxies: [🟢 直连, 🚀 节点选择]}
   - {name: 🐟 漏网之鱼,!!merge <<: *pr}
   - {name: 🛫 前置节点, type: select, include-all: true}
