@@ -95,12 +95,14 @@ dns:
 #    udp: true
  
 # 锚点
-pr: &pr {type: select, proxies: [🚀 节点选择, 🔗 链式代理主, 🔗 链式代理副, 🛫 前置节点, 🚄 中转节点, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🟢 直连]}
+pr: &pr {type: select, proxies: [🚀 节点选择, 🔗 链式代理主, 🔗 链式代理副, 🛫 前置节点, 🛬 落地节点, 🛫 前置节点1, ✈️ 中转节点1, 🛬 落地节点1, 🛫 前置节点2, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🟢 直连]}
 # 策略组
 proxy-groups:
   - {name: 🔗 链式代理主, type: relay, proxies: [🛫 前置节点, 🛬 落地节点]}
-  - {name: 🔗 链式代理副, type: relay, proxies: [🛫 前置节点, 🚄 中转节点, 🛬 落地节点]}
-  - {name: 🚀 节点选择, type: select, proxies: [🔗 链式代理主, 🔗 链式代理副, 🛫 前置节点, 🚄 中转节点, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🟢 直连]}
+  - {name: 🔗 链式代理副, type: relay, proxies: [🛫 前置节点1, ✈️ 中转节点1, 🛬 落地节点1]}
+  - {name: 🏠 住宅链式代理, type: relay, proxies: [🛫 前置节点2, 🏠 住宅IP]}
+  - {name: 🚀 节点选择, type: select, proxies: [🔗 链式代理主, 🔗 链式代理副, 🏠 住宅链式代理, 🛫 前置节点, ✈️ 中转节点1, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🟢 直连]}
+  - {name: 🏠 住宅代理, type: select, proxies: [🏠 住宅链式代理, 🔗 链式代理主, 🔗 链式代理副, 🚀 节点选择]}
   - {name: 📹 YouTube,!!merge <<: *pr}
   - {name: 🍀 Google,!!merge <<: *pr}
   - {name: 🤖 ChatGPT,!!merge <<: *pr}
@@ -117,8 +119,12 @@ proxy-groups:
   - {name: 🎯 全球直连, type: select, proxies: [🟢 直连, 🚀 节点选择]}
   - {name: 🐟 漏网之鱼,!!merge <<: *pr}
   - {name: 🛫 前置节点, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, 🔯 香港故转]}
-  - {name: 🚄 中转节点, type: select, include-all: true}
   - {name: 🛬 落地节点, type: select, include-all: true}
+  - {name: 🛫 前置节点1, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, 🔯 香港故转]}
+  - {name: ✈️ 中转节点1, type: select, include-all: true}
+  - {name: 🛬 落地节点1, type: select, include-all: true}
+  - {name: 🛫 前置节点2, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, 🔯 香港故转]}
+  - {name: 🏠 住宅IP, type: select, include-all: true}
   - {name: 🇭🇰 香港节点, type: select, include-all: true, filter: "(?i)港|hk|hongkong|hong kong"}
   - {name: 🇯🇵 日本节点, type: select, include-all: true, filter: "(?i)日|jp|japan"}
   - {name: 🇺🇲 美国节点, type: select, include-all: true, filter: "(?i)美|us|unitedstates|united states"}
@@ -135,6 +141,7 @@ rules:
   - RULE-SET,apple_domain,🍎 Apple
   - RULE-SET,proxylite,🚀 节点选择
   - RULE-SET,ai,🤖 ChatGPT
+  - RULE-SET,zhuzhaidaili,🏠 住宅代理
   - RULE-SET,github_domain,👨🏿‍💻 GitHub
   - RULE-SET,youtube_domain,📹 YouTube
   - RULE-SET,google_domain,🍀 Google
@@ -160,6 +167,7 @@ rule-providers:
   private_domain: {!!merge <<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"}
   zijiandirect: {!!merge <<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/Direct.list"}
   proxylite: {!!merge <<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/ProxyLite.list"}
+  zhuzhaidaili: {!!merge <<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/zhuzhaidaili.list"}
   ai: { <<: *domain, url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs" }
   youtube_domain: {!!merge <<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}
   google_domain: {!!merge <<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"}
