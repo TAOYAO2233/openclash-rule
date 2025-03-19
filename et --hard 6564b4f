@@ -1,0 +1,139 @@
+[33mce77aac[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m 1
+[33m3140b5b[m Revert "修改"
+[33m487ef5e[m 修改
+[33ma143fd1[m 2025.3.17
+[33m6564b4f[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m 修改
+[33m131e26f[m 修改规则
+[33md8226e5[m 修改ddos-p3.py第三版
+[33m3f073b6[m 修改ddos-p3.py第二版
+[33mde336f0[m 修改文件夹名称
+[33maa2aac8[m Merge branch 'main' of https://github.com/TAOYAO2233/openclash-rule
+[33m61493f8[m python
+[33m0de9d15[m 修改tdl代码，优化时间选项
+[33m30ffda8[m Merge branch 'main' of https://github.com/TAOYAO2233/openclash-rule
+[33m0e4c1eb[m Create 网络.bat
+[33mc58b22a[m Create 网络.bat
+[33meba3e76[m Create 禁用.bat
+[33mc92f229[m Create 启用.bat
+[33m8ed9f39[m Update zijian.ini
+[33m9338bb1[m Create openclash
+[33m4339311[m Update fuxie.yaml
+[33m79a789b[m Update zijian.ini
+[33m42d039a[m Create zhuzhaidaili.list
+[33mbcb33ad[m Update zijian.ini
+[33m6a2f3ed[m Update zijian.ini
+[33m0fe85d3[m Update zijian.ini
+[33m454b906[m Update zijian.ini
+[33mdcf0635[m Update fuxie.yaml
+[33m1ab219b[m Update fuxie.yaml
+[33mdb0e98a[m Create fuxie.yaml
+[33mcb5b4e7[m Create clash.yaml
+[33mdbf328e[m Update Direct.list
+[33mc5061b9[m Update zijian.ini
+[33mea77aa6[m Update zijian.ini
+[33m21f30cd[m Update Direct.list
+[33mbcb11df[m Update Direct.list
+[33ma2c52e9[m Update Direct.list
+[33m25868c3[m Update tdl_forward_commands.sh
+[33m539aeed[m Update Direct.list
+[33mae1c043[m Update tdl_forward_commands.sh
+[33mbf0958b[m Update tdl_commands.sh
+[33mf4391d6[m Update tdl_commands.sh
+[33m8334e9d[m Update tdl_commands.sh
+[33mf2a4d9a[m Update 使用方法.md
+[33mebfa5c0[m Update tdl_forward_commands.sh
+[33m6282f9e[m Update tdl_commands.sh
+[33mcf6b2f1[m Update tdl_commands.sh
+[33m48722ae[m Update tdl_commands.sh
+[33m200ebc3[m Update tdl_forward_commands.sh
+[33m8829bd6[m Update tdl_commands.sh
+[33m25c9b72[m Update tdl_commands.sh
+[33m776e1a8[m Merge branch 'main' of https://github.com/TAOYAO2233/openclash-rule
+[33m53c9ce2[m Update ProxyLite.list
+[33mf853147[m Update ProxyLite.list
+[33m22c8f15[m Update delete_old_files.sh
+[33mc7a1c26[m Merge branch 'main' of https://github.com/TAOYAO2233/openclash-rule
+[33m7a99bfa[m Create tdl_forward_commands.sh
+[33m334d3f2[m Create tdl_forward_commands.sh
+[33m1c073b2[m Create tdl_commands.sh
+[33mb846e57[m Create linuxcheck.sh
+[33mb29c8d4[m Update delete_old_files.sh
+[33me7a7037[m Create delete_old_files.sh
+[33m869aff1[m Update ProxyLite.list
+[33m21e52fd[m Update quehun.list
+[33mc73f887[m Update quehun.list
+[33m133bfcf[m Update quehun.list
+[33m5915136[m Update zijian.ini
+[33me96a7d6[m Update Direct.list
+[33m9281bfe[m Create quehun.list
+[33m0eab954[m Delete index.zip
+[33m0b03f32[m Create index.zip
+[33m794a3da[m Update Direct.list
+[33md00eef8[m Update Direct.list
+[33me1951ee[m Update zijian.ini
+[33meb3c458[m Update zijian.ini
+[33mbe22fa7[m Update Direct.list
+[33m342458a[m Update Direct.list
+[33m30be73c[m Update zijian.ini
+[33maa7a01f[m Update zijian.ini
+[33m7365240[m Update Direct.list
+[33m23a4db0[m Update stream_videos_with_interval.sh
+[33md84a63c[m Update download_video.sh
+[33mba2eddc[m Update stream_videos_with_interval.sh
+[33mc46505d[m Update Direct.list
+[33mcc36165[m Update stream_videos_with_interval.sh
+[33mf914a8c[m Update stream_videos_with_interval.sh
+[33md516acf[m Create download_video.sh
+[33m783f070[m Create 使用方法.md
+[33mcd14e23[m Update stream_videos_with_interval.sh
+[33mbc008cd[m Update stream_videos_with_interval.sh
+[33ma8a9653[m Update stream_videos_with_interval.sh
+[33m9d20a3b[m Update stream_videos_with_interval.sh
+[33m0c2e194[m Create stream_videos_with_interval.sh
+[33m1ead0cf[m Create convert_flv_to_mp4.sh
+[33mf0c99d6[m Create convert_flv_copy_mp4.sh
+[33mf3ccfc4[m Update zijian.ini
+[33m59ff681[m Update zijian.ini
+[33m9c387a1[m Update zijian.ini
+[33m8e65211[m Update zijian.ini
+[33md663f55[m Update zijian.ini
+[33m1de4471[m Update zijian.ini
+[33m75717cd[m Update zijian.ini
+[33m9504795[m Update zijian.ini
+[33mb0a64c6[m Update zijian.ini
+[33me72fb00[m Create Lite version.ini
+[33m8a41eed[m Update zijian.ini
+[33m1bc0831[m Update zijian.ini
+[33m6212425[m Update zijian.ini
+[33m68a667d[m Update zijian.ini
+[33mcc9cdfd[m Update zijian.ini
+[33mb31c30c[m Update zijian.ini
+[33m2bef02f[m Update zijian.ini
+[33m677854c[m Update zijian.ini
+[33mb8c5924[m Update zijian.ini
+[33m9ed0f5a[m Update zijian.ini
+[33md3f838d[m Update Direct.list
+[33mc42e21b[m Update Direct.list
+[33m1316bc9[m Update zijian.ini
+[33m1cf1b78[m Update qichiyu.ini
+[33m86a4457[m Update ProxyLite.list
+[33mce8914e[m Update zijian.ini
+[33m1bc5bfb[m Delete qichiyu.ini
+[33m02618cb[m Create zijian.ini
+[33md03e14b[m Create qichiyu.ini
+[33m5f776b4[m Create ProxyLite.list
+[33m9810aed[m Create Direct.list
+[33mf8c3a85[m Create AI.list
+[33m9548b89[m Create qichiyu.ini
+[33me91a946[m Create ProxyLite.list
+[33m78db28d[m Create Direct.list
+[33mf13d0cf[m Create AI.list
+[33m997eca0[m Delete qichiyu.ini
+[33mdb7f6af[m Delete ProxyLite.list
+[33me2a8809[m Delete Direct.list
+[33m7db3a7b[m Delete AI.list
+[33m43ff63f[m Update qichiyu.ini
+[33m2c6e348[m Update ProxyLite.list
+[33mf03e767[m Update qichiyu.ini
+[33mae9796c[m Add files via upload
+[33mc1c75bf[m Initial commit
