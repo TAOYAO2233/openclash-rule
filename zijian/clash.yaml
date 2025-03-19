@@ -25,6 +25,10 @@ proxy-providers-override:
   down: "200 Mbps"
   up: "200 Mbps"
 
+
+# 节点信息
+proxies:
+  - name
 # 用于下载订阅时指定UA
 global-ua: clash.meta 
     
