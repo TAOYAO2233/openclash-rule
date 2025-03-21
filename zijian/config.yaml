@@ -22,21 +22,18 @@ proxy-prociders:
 
 # global-ua: clash.meta
 # 节点信息
-proxies:
-  - name: 住宅链式
-    dialer-proxy: 🚀 节点选择
-    type: ss
-    server:
-    port: 
-    client-fingerprint: chrome
-    tls: true
-    udp: true
-    servername: 
-    flow: 
-    network: tcp
-    reality-opts:
-      public-key: 
-    uuid:
+proxies: # socks5
+  - name: "socks"
+    type: socks5
+    server: server
+    port: 443
+    # username: username
+    # password: password
+    # tls: true
+    # fingerprint: xxxx
+    # skip-cert-verify: true
+    # udp: true
+    # ip-version: ipv6
   - {name: 直连, type: direct, udp: true}
 
 
