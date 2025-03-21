@@ -1,7 +1,7 @@
 # 机场订阅，名称不能重复
 proxy-prociders:
   Airport1: # 机场名称可以更改
-    url: "https://sub.866806.xyz/53ZCvibYXAaAEhsytaoh/download/collection/%E9%80%9A%E7%94%A8?target=ClashMeta"
+    url: "订阅地址"
     type: http
     interval: 86400 # 更新间隔单位秒
     health-check:
