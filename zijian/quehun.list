@@ -2,7 +2,7 @@
 
 # 域名关键字匹配
 DOMAIN-KEYWORD,mahjongsoul
-DOMAIN-KEYWORD,hltv
+# DOMAIN-KEYWORD,hltv
 
 
 
@@ -10,5 +10,5 @@ DOMAIN-KEYWORD,hltv
 DOMAIN-SUFFIX,maj-soul.com
 DOMAIN-SUFFIX,mahjongsoul.com
 DOMAIN-SUFFIX,game.mahjongsoul.com
-DOMAIN-SUFFIX,hltv.org
-DOMAIN-SUFFIX,www.hltv.org
+# DOMAIN-SUFFIX,hltv.org
+# DOMAIN-SUFFIX,www.hltv.org
