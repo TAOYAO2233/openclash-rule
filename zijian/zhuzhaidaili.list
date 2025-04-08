@@ -85,3 +85,4 @@ IP-CIDR,69.195.160.0/19,no-resolve
 DOMAIN,cdn.usefathom.com
 DOMAIN-SUFFIX,anthropic.com
 DOMAIN-SUFFIX,claude.ai
+DOMAIN-KEYWORD,claude
