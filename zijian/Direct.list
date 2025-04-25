@@ -10,10 +10,11 @@ DOMAIN-SUFFIX,hltv.org
 DOMAIN-SUFFIX,www.hltv.org
 DOMAIN-SUFFIX,my.frantech.ca
 DOMAIN-SUFFIX,47bt.com
+DOMAIN-SUFFIX,webgl3d.cn
 # 域名关键字匹配
 DOMAIN-KEYWORD,baidu
 DOMAIN-KEYWORD,girigirilove
-
+DOMAIN-KEYWORD,webgl3d
 # IP段匹配
 IP-CIDR,219.146.1.66/32,no-resolve
 IP-CIDR,192.210.133.33/32,no-resolve
