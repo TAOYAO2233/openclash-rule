@@ -7,7 +7,7 @@ proxy-providers:
     health-check:
       url: https://www.gstatic.com/generate_204
       interval: 300
-    proxy: 直连 # 更新选用的节点
+    proxy: DIRECT # 更新选用的节点
     header:
       User-Agent:
         - "clash"
@@ -23,7 +23,6 @@ proxy-providers:
 # global-ua: clash.meta
 # 节点信息
 proxies: 
-  - {name: 直连, type: direct}
   # - name: "socks"
   #   type: socks5
   #   server: server
