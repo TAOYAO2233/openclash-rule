@@ -77,7 +77,7 @@ geo-url:  # GEO地址
 # 控制面板
 external-controller: 0.0.0.0:9090
 secret: ""    # 控制面板密码
-external-ui: "/etc/mihomo/run/ui"
+external-ui: "/etc/openclash/run"  #external-ui 路径如果出现报错，根据你使用的插件进行调整，比如openclash改为： /etc/openclash/run  ，裸核跑改为/etc/mihomo/run
 external-ui-name: zashboard
 external-ui-url: "https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip"
 
