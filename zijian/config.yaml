@@ -1,5 +1,5 @@
 # 机场订阅，名称不能重复
-proxy-prociders:
+proxy-providers:
   Airport1: # 机场名称可以更改
     url: "订阅地址"
     type: http
@@ -22,19 +22,20 @@ proxy-prociders:
 
 # global-ua: clash.meta
 # 节点信息
-proxies: # socks5
-  - name: "socks"
-    type: socks5
-    server: server
-    port: 443
-    # username: username
-    # password: password
-    # tls: true
-    # fingerprint: xxxx
-    # skip-cert-verify: true
-    # udp: true
-    # ip-version: ipv6
-  - {name: 直连, type: direct, udp: true}
+proxies: 
+  - {name: DIRECT, type: direct}
+  # - name: "socks"
+  #   type: socks5
+  #   server: server
+  #   port: 443
+  #   # username: username
+  #   # password: password
+  #   # tls: true
+  #   # fingerprint: xxxx
+  #   # skip-cert-verify: true
+  #   # udp: true
+  #   # ip-version: ipv6
+  # - {name: 直连, type: direct, udp: true}
 
 
 
@@ -56,7 +57,7 @@ find-process-mode: 'off'  # 查找进程模式
 global-client-fingerprint: chrome # 全局客户端指纹
 keep-alive-idle: 600  # 保持连接时间
 keep-alive-interval: 30  # 保持连接间隔
-diable-keep-alive: false  # 禁用保持连接
+disable-keep-alive: false  # 禁用保持连接
 profile:
   store-selected: true  # 存储选中的策略组
   store-fake-ip: true     # 存储fakeip
