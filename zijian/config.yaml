@@ -148,14 +148,14 @@ dns:
     - 223.5.5.5
   direct-nameserver-follow-policy: false
   proxy-server-nameserver:    #解析节点域名
-    - 210.22.70.225
-    - 210.22.70.3
+    - 223.5.5.5
+    - 223.6.6.6
     - https://dns.alidns.com/dns-query
   nameserver-policy:
     '+.baidu.com': '114.114.114.114'
     "rule-set:private_domain,cn_domain":
-      - 210.22.70.225
-      - 210.22.70.3
+      - 223.5.5.5
+      - 223.6.6.6
     "rule-set:gfw_domain,geolocation-!cn":
       - "https://cloudflare-dns.com/dns-query"
       - "https://dns.google/dns-query"
@@ -163,9 +163,9 @@ dns:
       - tls://1.1.1.1#🚀 节点选择&h3=true
   # namesever尽量用运营商提供的DNS
   nameserver:
-    - 210.22.70.3
-    - 210.22.70.225
     - 223.5.5.5
+    - 223.6.6.6
+    - 114.114.114.114
   fallback:
     - tls://8.8.4.4
     - tls://1.1.1.1
