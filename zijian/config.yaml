@@ -202,7 +202,7 @@ proxy-groups:
   - {name: 🎥 NETFLIX,<<: *pr}
   - {name: ✈️ Speedtest,<<: *pr}
   - {name: 💶 PayPal,<<: *pr}
-  - {name: 🍎 Apple, type: select, proxies: [🎯 全球直连, 🚀 节点选择]}
+  - {name: 🍎 Apple, type: select, proxies: [直连, 🚀 节点选择]}
   - {name: 🎯 全球直连, type: select, proxies: [直连]}
   - {name: 🐟 漏网之鱼,<<: *pr}
   - {name: 🛫 前置节点, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, 🔯 香港故转]}
