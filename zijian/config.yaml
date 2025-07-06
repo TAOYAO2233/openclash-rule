@@ -7,7 +7,7 @@ proxy-providers:
     health-check:
       url: https://www.gstatic.com/generate_204
       interval: 300
-    proxy: DIRECT # 更新选用的节点
+    proxy: 直连 # 更新选用的节点
     header:
       User-Agent:
         - "clash"
@@ -23,6 +23,7 @@ proxy-providers:
 # global-ua: clash.meta
 # 节点信息
 proxies: 
+  - {name: 直连, type: direct}
   # - name: "socks"
   #   type: socks5
   #   server: server
@@ -34,7 +35,7 @@ proxies:
   #   # skip-cert-verify: true
   #   # udp: true
   #   # ip-version: ipv6
-  # - {name: 直连, type: direct, udp: true}
+
 
 
 
@@ -181,14 +182,14 @@ dns:
       - '+.facebook.com'
 
 # 锚点
-pr: &pr {type: select, proxies: [🚀 节点选择, 🔗 链式代理主, 🔗 链式代理副, 🛫 前置节点, 🛬 落地节点, 🛫 前置节点1, ✈️ 中转节点1, 🛬 落地节点1, 🛫 住宅前置节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🟢 直连]}
+pr: &pr {type: select, proxies: [🚀 节点选择, 🔗 链式代理主, 🔗 链式代理副, 🛫 前置节点, 🛬 落地节点, 🛫 前置节点1, ✈️ 中转节点1, 🛬 落地节点1, 🛫 住宅前置节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🎯 全球直连]}
 
 # 代理策略组
 proxy-groups:
   - {name: 🔗 链式代理主, type: relay, proxies: [🛫 前置节点, 🛬 落地节点]}
   - {name: 🔗 链式代理副, type: relay, proxies: [🛫 前置节点1, ✈️ 中转节点1, 🛬 落地节点1]}
   - {name: 🏠 住宅链式代理, type: relay, proxies: [🛫 住宅前置节点, 🏠 住宅IP]}
-  - {name: 🚀 节点选择, type: select, proxies: [🔗 链式代理主, 🔗 链式代理副, 🏠 住宅链式代理, 🛫 前置节点, ✈️ 中转节点1, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🟢 直连]}
+  - {name: 🚀 节点选择, type: select, proxies: [🔗 链式代理主, 🔗 链式代理副, 🏠 住宅链式代理, 🛫 前置节点, ✈️ 中转节点1, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🎯 全球直连]}
   - {name: 🏠 住宅代理, type: select, proxies: [🏠 住宅链式代理, 🔗 链式代理主, 🔗 链式代理副, 🚀 节点选择]}
   - {name: 📹 YouTube,<<: *pr}
   - {name: 🍀 Google,<<: *pr}
@@ -201,9 +202,8 @@ proxy-groups:
   - {name: 🎥 NETFLIX,<<: *pr}
   - {name: ✈️ Speedtest,<<: *pr}
   - {name: 💶 PayPal,<<: *pr}
-  - {name: 🍎 Apple, type: select, proxies: [🟢 直连, 🚀 节点选择]}
-  - {name: 🟢 直连, type: select, proxies: [DIRECT]}
-  - {name: 🎯 全球直连, type: select, proxies: [🟢 直连, 🚀 节点选择]}
+  - {name: 🍎 Apple, type: select, proxies: [🎯 全球直连, 🚀 节点选择]}
+  - {name: 🎯 全球直连, type: select, proxies: [直连, 🚀 节点选择]}
   - {name: 🐟 漏网之鱼,<<: *pr}
   - {name: 🛫 前置节点, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, 🔯 香港故转]}
   - {name: 🛬 落地节点, type: select, include-all: true}
@@ -220,14 +220,14 @@ proxy-groups:
   - {name: ♻️ 香港自动, type: url-test, include-all: true, tolerance: 20, interval: 300, filter: "(?=.*(港|HK|(?i)Hong))^((?!(台|日|韩|新|深|美)).)*$"}
   - {name: ♻️ 日本自动, type: url-test, include-all: true, tolerance: 20, interval: 300, filter: "(?=.*(日|JP|(?i)Japan))^((?!(港|台|韩|新|美)).)*$" }
   - {name: ♻️ 美国自动, type: url-test, include-all: true, tolerance: 20, interval: 300, filter: "(?=.*(美|US|(?i)States|America))^((?!(港|台|日|韩|新)).)*$"}
-  - {name: ♻️ 自动选择, type: url-test, include-all: true, tolerance: 20, interval: 300, filter: "^((?!(直连)).)*$"}
+  - {name: ♻️ 自动选择, type: url-test, include-all: true, tolerance: 20, interval: 300, filter: "^((?!(直连|住宅IP)).)*$"}
   - {name: 🌐 全部节点, type: select, include-all: true}
 
 
 #规则匹配
 rules:
-  - RULE-SET,private_domain,🟢 直连
-  - RULE-SET,zijiandirect,🟢 直连
+  - RULE-SET,private_domain,🎯 全球直连
+  - RULE-SET,zijiandirect,🎯 全球直连
   - RULE-SET,proxylite,🚀 节点选择
   - RULE-SET,zhuzhaidaili,🏠 住宅代理
   - RULE-SET,ai,🤖 ChatGPT
@@ -276,7 +276,6 @@ rule-providers:
   gfw_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gfw.mrs"}
   geolocation-!cn: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs"}
   cn_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"}
-  
   cn_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"}
   google_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs"}
   telegram_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs"}
