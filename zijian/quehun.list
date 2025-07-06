@@ -1,0 +1,14 @@
+# 代理补充列表
+
+# 域名关键字匹配
+DOMAIN-KEYWORD,mahjongsoul
+# DOMAIN-KEYWORD,hltv
+
+
+
+# 域名后缀匹配
+DOMAIN-SUFFIX,maj-soul.com
+DOMAIN-SUFFIX,mahjongsoul.com
+DOMAIN-SUFFIX,game.mahjongsoul.com
+# DOMAIN-SUFFIX,hltv.org
+# DOMAIN-SUFFIX,www.hltv.org
