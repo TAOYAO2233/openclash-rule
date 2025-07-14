@@ -5,8 +5,12 @@ proxy-providers:
     type: http
     interval: 86400 # 更新间隔单位秒
     health-check:
+      enable: true
       url: https://www.gstatic.com/generate_204
-      interval: 300
+      interval: 120
+      tolerance: 50
+      timeout: 5000
+      max-failed-times: 5
     proxy: 直连 # 更新选用的节点
     header:
       User-Agent:
