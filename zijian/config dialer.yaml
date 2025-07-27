@@ -1,7 +1,7 @@
 # 机场订阅，名称不能重复
 proxy-providers:
   Airport1: # 机场名称可以更改
-    url: "https://sub.866806.xyz/53ZCvibYXAaAEhsytaoh/download/collection/%E9%80%9A%E7%94%A8?target=ClashMeta"
+    url: "#订阅地址链接"
     type: http
     interval: 86400 # 更新间隔单位秒
     health-check:
@@ -28,8 +28,8 @@ proxy-providers:
     override:
       dialer-proxy: 🛫 前置节点
     payload:
-      - { name: "ss美国西雅图落地", type: "ss", server: "ssusseattle.745741.xyz", port: 26363, cipher: "chacha20-ietf-poly1305", password: "e7ad80ce-a439-4bd0-b8fe-8420d222a6d0" }
-      - { name: "ss美国Buffalo落地", type: "ss", server: "ssusbuffalo.745741.xyz", port: 26363, cipher: "chacha20-ietf-poly1305", password: "e7ad80ce-a439-4bd0-b8fe-8420d222a6d0" }
+      - { name: "ss美国西雅图落地", type: "ss", server: "", port: 443, cipher: "", password: "" }
+      - { name: "ss美国Buffalo落地", type: "ss", server: "", port: 443, cipher: "", password: "" }
 
 
 # global-ua: clash.meta
@@ -39,10 +39,10 @@ proxies:
   - name: "住宅IP"          # 节点名称，勿与任何 proxy-group 同名
     dialer-proxy: 🛫 住宅前置节点
     type: socks5
-    server: 154.61.160.57  # 服务器地址
+    server: 00.00.00.00  # 服务器地址
     port: 443              # 端口
-    username: "2ZLQ55175"  # 用户名
-    password: "IXlADZLg"   # 密码
+    username: "000"  # 用户名
+    password: "000"   # 密码
     udp: false              # 开启 UDP
   
   - {name: 直连, type: direct}
