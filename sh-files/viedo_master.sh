@@ -1,17 +1,15 @@
 #!/bin/bash
 
 # ==============================================================================
-# 脚本名称: Video Master Tool v7.0 (Universal Format Edition)
-# 更新日志:
-#   v7.0: 移除全局格式限制；新增格式选择子菜单；支持全格式管理。
+# 脚本名称: Video Master Tool v7.1 (Bugfix Edition)
+# 修复内容: 修复了子菜单文字不显示的问题 (Stdout Capture Fix)。
 # ==============================================================================
 
 # --- 全局配置 ---
 LIST_FILE="concat_list.txt"
 CONFIG_FILE="$HOME/.video_master_last_path"
 CURRENT_WORK_DIR=""
-
-# 定义“所有格式”包含的扩展名 (用于扫描)
+# 定义“所有格式”包含的扩展名
 ALL_VIDEO_EXTS="@(flv|mp4|mkv|ts|mov|avi|wmv|m4v)"
 
 # --- 基础工具 ---
@@ -23,7 +21,6 @@ check_dependency() {
     fi
 }
 
-# --- 路径管理 (保持 v6.0 的记忆功能) ---
 save_config() { echo "$1" > "$CONFIG_FILE"; }
 
 init_workspace() {
@@ -58,45 +55,36 @@ init_workspace() {
 
 # --- 核心: 动态文件扫描 ---
 
-# 参数 $1: 文件后缀 (不带点，例如 "flv" 或 "all")
 get_file_list() {
     target_ext="$1"
     files=()
-    
-    # 开启扩展模式匹配 (for @(...) syntax) 和 空匹配处理
     shopt -s extglob nullglob nocaseglob
-
     if [ "$target_ext" == "all" ]; then
-        # 扫描所有定义的视频格式
         files=( *.$ALL_VIDEO_EXTS )
     else
-        # 扫描特定格式
         files=( *."$target_ext" )
     fi
-    
     shopt -u extglob nullglob nocaseglob
 }
 
-# 参数 $1: 文件后缀
 print_file_list_ui() {
     get_file_list "$1"
-    
     if [ ${#files[@]} -eq 0 ]; then
-        echo -e "\033[33m[Warning] 当前目录下没有找到类型为 [$1] 的文件。\033[0m"
+        echo -e "\033[33m[Warning] 当前目录下没有找到类型为 [$1] 的文件。\033[0m" >&2
         return 1
     fi
 
-    echo "------------------------------------------------"
-    echo "   筛选类型: [${1^^}]"  # ${var^^} 转大写显示
-    echo "   文件列表 (按名称排序)"
-    echo "------------------------------------------------"
+    echo "------------------------------------------------" >&2
+    echo "   筛选类型: [${1^^}]" >&2
+    echo "   文件列表 (按名称排序)" >&2
+    echo "------------------------------------------------" >&2
     local idx=1
     for f in "${files[@]}"; do
         size=$(du -h "$f" | cut -f1)
-        printf "[%2d] %s \t(%s)\n" "$idx" "$f" "$size"
+        printf "[%2d] %s \t(%s)\n" "$idx" "$f" "$size" >&2
         ((idx++))
     done
-    echo "------------------------------------------------"
+    echo "------------------------------------------------" >&2
     return 0
 }
 
@@ -113,16 +101,18 @@ parse_selection() {
     done
 }
 
-# --- 交互子菜单: 选择格式 ---
+# --- 修复后的子菜单 (使用 >&2 输出 UI) ---
 select_extension_menu() {
-    echo "----------------------------"
-    echo "请选择目标文件的格式:"
-    echo " 1. flv"
-    echo " 2. mp4"
-    echo " 3. mkv"
-    echo " 4. 所有视频 (All)"
-    echo "----------------------------"
+    echo "----------------------------" >&2
+    echo "请选择目标文件的格式:" >&2
+    echo " 1. flv" >&2
+    echo " 2. mp4" >&2
+    echo " 3. mkv" >&2
+    echo " 4. 所有视频 (All)" >&2
+    echo "----------------------------" >&2
     read -p "选择 [1-4] (默认 All): " ext_choice
+    
+    # 仅将结果输出到 Stdout，供变量捕获
     case $ext_choice in
         1) echo "flv";;
         2) echo "mp4";;
@@ -133,13 +123,11 @@ select_extension_menu() {
 
 # --- 业务功能 ---
 
-# 1. 拼接
 task_concat() {
     echo -e "\033[36m[模式 1: 拼接视频]\033[0m"
-    # 1. 弹出子菜单选择格式
+    # 调用子菜单，UI 显示在屏幕，结果存入变量
     local target_type=$(select_extension_menu)
     
-    # 2. 列出文件
     print_file_list_ui "$target_type" || { read -p "按回车返回..."; return; }
     
     read -p "请输入文件编号 (输入 0 或回车返回): " selection
@@ -162,26 +150,18 @@ task_concat() {
         fi
     done
 
-    # 智能命名逻辑
-    # 1. 提取日期
     date_str=$(echo "$first_file" | grep -oE '[0-9]{4}[-_.]?[0-9]{2}[-_.]?[0-9]{2}' | head -n 1)
     [ -z "$date_str" ] && date_str="Merged_$(date +%Y%m%d)"
-    
-    # 2. 提取源文件的后缀 (处理用户在 All 模式下选择了 mkv 的情况)
-    # ${filename##*.} 获取扩展名
     output_ext="${first_file##*.}"
     output_name="${date_str}_merged.${output_ext}"
 
-    echo "[Info] 正在拼接 (Stream Copy)..."
-    echo "[Info] 输出文件: $output_name"
-    
+    echo "[Info] 正在拼接..."
     ffmpeg -y -f concat -safe 0 -i "$LIST_FILE" -c copy "$output_name"
     
     [ $? -eq 0 ] && rm "$LIST_FILE" && echo -e "\033[32m[Success] 完成\033[0m"
     read -p "按回车返回..."
 }
 
-# 2. 转换
 task_convert() {
     echo -e "\033[36m[模式 2: 转 MP4]\033[0m"
     local target_type=$(select_extension_menu)
@@ -208,11 +188,8 @@ task_convert() {
     read -p "按回车返回..."
 }
 
-# 3. 删除 (包含所有格式)
 task_delete() {
     echo -e "\033[31m[模式 3: 删除文件]\033[0m"
-    
-    # 直接列出所有视频格式，不再询问
     print_file_list_ui "all" || { read -p "按回车返回..."; return; }
     
     read -p "请输入编号 (输入 0 或回车返回): " selection
@@ -247,7 +224,7 @@ init_workspace
 while true; do
     clear
     echo "=========================================="
-    echo "      Video Master v7.0 (Universal)       "
+    echo "      Video Master v7.1 (Bugfix)          "
     echo "=========================================="
     echo " 当前目录: $CURRENT_WORK_DIR"
     echo "------------------------------------------"
