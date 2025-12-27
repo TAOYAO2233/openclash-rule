@@ -1,18 +1,15 @@
 #!/bin/bash
 
 # ==============================================================================
-# 脚本名称: Video Master Tool v3.0 (Path Aware Edition)
-# 功能列表:
-#   0. 指定工作目录 (新增)
-#   1. 无损拼接 (Stream Copy)
-#   2. MP4 封装转换 (Web Optimized)
-#   3. 选择性删除
+# 脚本名称: Video Master Tool v4.0 (Interactive Flow Optimized)
+# 更新日志:
+#   v4.0: 增加子菜单“返回上级”逻辑，修复无法取消操作的问题。
 # ==============================================================================
 
 # --- 全局变量 ---
-TARGET_EXT="flv"             # 默认处理的文件扩展名
-LIST_FILE="concat_list.txt"  # 临时列表文件名
-CURRENT_WORK_DIR=""          # 当前工作目录变量
+TARGET_EXT="flv"             
+LIST_FILE="concat_list.txt"  
+CURRENT_WORK_DIR=""          
 
 # --- 基础工具函数 ---
 
@@ -23,41 +20,32 @@ check_dependency() {
     fi
 }
 
-# --- 新增核心函数: 初始化工作目录 ---
 init_workspace() {
     clear
     echo "=========================================="
     echo "      Video Master - 初始化设置           "
     echo "=========================================="
     echo "请输入视频所在的文件夹路径 (绝对路径):"
-    echo "例如: /home/user/downloads/videos"
     echo -e "\033[36m[提示] 直接按回车 (Enter) 将使用当前目录\033[0m"
     echo "------------------------------------------"
     
     read -p "路径 > " user_path
 
-    # 1. 处理空输入：默认为当前目录
     if [ -z "$user_path" ]; then
         user_path=$(pwd)
     fi
 
-    # 2. 路径校验逻辑
     if [ ! -d "$user_path" ]; then
-        echo -e "\033[31m[Error] 路径不存在或不是一个目录: $user_path\033[0m"
-        echo "脚本即将退出..."
+        echo -e "\033[31m[Error] 路径不存在: $user_path\033[0m"
         exit 1
     fi
 
-    # 3. 切换工作目录 (Context Switch)
     cd "$user_path" || { echo "无法进入目录"; exit 1; }
-    
-    # 更新全局变量以便显示
     CURRENT_WORK_DIR=$(pwd)
-    echo -e "\033[32m[Success] 已锁定工作目录: $CURRENT_WORK_DIR\033[0m"
+    echo -e "\033[32m[Success] 工作目录: $CURRENT_WORK_DIR\033[0m"
     sleep 1
 }
 
-# 打印文件列表 (基于当前工作目录)
 print_file_list() {
     files=()
     shopt -s nullglob
@@ -83,7 +71,6 @@ print_file_list() {
     return 0
 }
 
-# 解析用户选择
 parse_selection() {
     selected_indices=()
     for part in $1; do
@@ -92,7 +79,10 @@ parse_selection() {
             end=${part#*-}
             for ((i=start; i<=end; i++)); do selected_indices+=("$i"); done
         elif [[ "$part" =~ ^[0-9]+$ ]]; then
-            selected_indices+=("$part")
+            # 过滤掉 0，因为 0 被用作返回码
+            if [ "$part" -ne 0 ]; then
+                selected_indices+=("$part")
+            fi
         fi
     done
 }
@@ -102,11 +92,23 @@ parse_selection() {
 # 1. 拼接
 task_concat() {
     print_file_list || return
-    echo -e "\033[36m[模式 1] 拼接视频 (Stream Copy)\033[0m"
-    read -p "请输入文件编号 (如 1 2 3): " selection
+    echo -e "\033[36m[模式 1] 拼接视频\033[0m"
+    # --- 改进点：明确的退出提示 ---
+    read -p "请输入文件编号 (输入 0 或回车返回菜单): " selection
+
+    # --- 改进点：空值/取消检测 ---
+    if [ -z "$selection" ] || [ "$selection" == "0" ]; then
+        echo "[Info] 操作已取消，返回主菜单。"
+        return
+    fi
+
     parse_selection "$selection"
 
-    if [ ${#selected_indices[@]} -lt 2 ]; then echo "[Info] 需至少2个文件"; return; fi
+    if [ ${#selected_indices[@]} -lt 2 ]; then 
+        echo "[Info] 选择文件不足，无法拼接。"
+        read -p "按回车继续..." 
+        return
+    fi
 
     > "$LIST_FILE"
     count=0
@@ -122,7 +124,6 @@ task_concat() {
         fi
     done
 
-    # 日期提取算法
     date_str=$(echo "$first_file" | grep -oE '[0-9]{4}[-_.]?[0-9]{2}[-_.]?[0-9]{2}' | head -n 1)
     [ -z "$date_str" ] && date_str="Merged_$(date +%Y%m%d)"
     output_name="${date_str}_merged.${TARGET_EXT}"
@@ -131,16 +132,22 @@ task_concat() {
     ffmpeg -y -f concat -safe 0 -i "$LIST_FILE" -c copy "$output_name"
     
     [ $? -eq 0 ] && rm "$LIST_FILE" && echo -e "\033[32m[OK] 保存为: $output_name\033[0m"
-    read -p "按回车继续..."
+    read -p "按回车返回菜单..."
 }
 
 # 2. 转换 MP4
 task_convert() {
     print_file_list || return
-    echo -e "\033[36m[模式 2] 转 MP4 (+faststart Web优化)\033[0m"
-    read -p "请输入文件编号: " selection
-    parse_selection "$selection"
+    echo -e "\033[36m[模式 2] 转 MP4 (+faststart)\033[0m"
+    # --- 改进点 ---
+    read -p "请输入文件编号 (输入 0 或回车返回菜单): " selection
 
+    if [ -z "$selection" ] || [ "$selection" == "0" ]; then
+        echo "[Info] 操作已取消。"
+        return
+    fi
+
+    parse_selection "$selection"
     if [ ${#selected_indices[@]} -eq 0 ]; then return; fi
 
     for idx in "${selected_indices[@]}"; do
@@ -154,14 +161,22 @@ task_convert() {
         fi
     done
     echo -e "\033[32m[OK] 转换结束\033[0m"
-    read -p "按回车继续..."
+    read -p "按回车返回菜单..."
 }
 
 # 3. 删除
 task_delete() {
     print_file_list || return
     echo -e "\033[31m[模式 3] 删除文件 (不可恢复)\033[0m"
-    read -p "请输入编号: " selection
+    # --- 改进点 ---
+    read -p "请输入编号 (输入 0 或回车返回菜单): " selection
+    
+    # --- 改进点：空值/取消检测 ---
+    if [ -z "$selection" ] || [ "$selection" == "0" ]; then
+        echo "[Info] 删除操作已取消。"
+        return
+    fi
+
     parse_selection "$selection"
     
     if [ ${#selected_indices[@]} -eq 0 ]; then return; fi
@@ -173,24 +188,29 @@ task_delete() {
         [ -n "$f" ] && del_list+=("$f")
     done
 
-    echo "将删除 ${#del_list[@]} 个文件。"
-    read -p "确认? (yes): " confirm
+    echo "----------------------------------------"
+    echo "即将删除以下 ${#del_list[@]} 个文件："
+    for f in "${del_list[@]}"; do echo " - $f"; done
+    echo "----------------------------------------"
+
+    # 删除操作需要更严格的确认，这里不接受空回车
+    read -p "输入 'yes' 确认删除，输入其他内容取消: " confirm
     if [ "$confirm" == "yes" ]; then
         for f in "${del_list[@]}"; do rm "$f"; echo "[Deleted] $f"; done
+    else
+        echo "[Info] 取消删除。"
     fi
-    read -p "按回车继续..."
+    read -p "按回车返回菜单..."
 }
 
 # --- 主程序入口 ---
 check_dependency
-
-# [核心步骤] 在进入主循环前，先设定工作目录
 init_workspace
 
 while true; do
     clear
     echo "=========================================="
-    echo "      Video Master v3.0 (Path Aware)      "
+    echo "      Video Master v4.0 (VPS Edition)     "
     echo "=========================================="
     echo " 当前目录: $CURRENT_WORK_DIR"
     echo "------------------------------------------"
@@ -205,8 +225,8 @@ while true; do
         1) task_concat ;;
         2) task_convert ;;
         3) task_delete ;;
-        4) init_workspace ;; # 允许中途切换目录
-        5) exit 0 ;;
+        4) init_workspace ;; 
+        5) echo "Bye!"; exit 0 ;;
         *) ;;
     esac
 done
