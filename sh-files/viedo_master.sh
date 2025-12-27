@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # ==============================================================================
-# 脚本名称: Video Master Tool v4.0 (Interactive Flow Optimized)
-# 更新日志:
-#   v4.0: 增加子菜单“返回上级”逻辑，修复无法取消操作的问题。
+# 脚本名称: Video Master Tool v5.0 (Smart Path Memory)
+# 更新亮点: 
+#   1. 输入路径时自动填充当前路径，支持直接编辑修改，无需重打。
+#   2. 修复了空路径回退逻辑。
 # ==============================================================================
 
 # --- 全局变量 ---
@@ -20,30 +21,46 @@ check_dependency() {
     fi
 }
 
+# --- 核心升级: 带记忆功能的路径设置 ---
 init_workspace() {
     clear
     echo "=========================================="
-    echo "      Video Master - 初始化设置           "
+    echo "      Video Master - 路径设置             "
     echo "=========================================="
-    echo "请输入视频所在的文件夹路径 (绝对路径):"
-    echo -e "\033[36m[提示] 直接按回车 (Enter) 将使用当前目录\033[0m"
+    
+    # 获取当前 Shell 上下文中的目录
+    # 如果是第一次运行，它是脚本所在目录；如果是切换，它是上一次的目录
+    current_default=$(pwd)
+    
+    echo "请输入/修改视频所在的文件夹路径:"
+    echo -e "\033[36m[提示] 路径已为您预填，可直接编辑或按回车确认。\033[0m"
     echo "------------------------------------------"
     
-    read -p "路径 > " user_path
+    # --- 关键修改: 使用 -e -i 实现预填充 ---
+    # 这会在提示符后直接显示当前路径，并允许您修改它
+    read -e -i "$current_default" -p "路径 > " user_path
 
+    # 容错：如果用户不小心清空了整行并回车，仍然默认为当前目录
     if [ -z "$user_path" ]; then
-        user_path=$(pwd)
+        user_path="$current_default"
     fi
 
+    # 校验逻辑
     if [ ! -d "$user_path" ]; then
         echo -e "\033[31m[Error] 路径不存在: $user_path\033[0m"
-        exit 1
+        echo "请检查拼写是否正确。"
+        read -p "按回车重试..."
+        init_workspace # 递归调用重试
+        return
     fi
 
+    # 切换目录
     cd "$user_path" || { echo "无法进入目录"; exit 1; }
+    
+    # 更新全局变量
     CURRENT_WORK_DIR=$(pwd)
-    echo -e "\033[32m[Success] 工作目录: $CURRENT_WORK_DIR\033[0m"
-    sleep 1
+    echo -e "\033[32m[Success] 工作目录已锁定: $CURRENT_WORK_DIR\033[0m"
+    sleep 0.5
 }
 
 print_file_list() {
@@ -79,33 +96,23 @@ parse_selection() {
             end=${part#*-}
             for ((i=start; i<=end; i++)); do selected_indices+=("$i"); done
         elif [[ "$part" =~ ^[0-9]+$ ]]; then
-            # 过滤掉 0，因为 0 被用作返回码
-            if [ "$part" -ne 0 ]; then
-                selected_indices+=("$part")
-            fi
+            if [ "$part" -ne 0 ]; then selected_indices+=("$part"); fi
         fi
     done
 }
 
-# --- 业务功能模块 ---
+# --- 业务功能 ---
 
-# 1. 拼接
 task_concat() {
     print_file_list || return
     echo -e "\033[36m[模式 1] 拼接视频\033[0m"
-    # --- 改进点：明确的退出提示 ---
     read -p "请输入文件编号 (输入 0 或回车返回菜单): " selection
 
-    # --- 改进点：空值/取消检测 ---
-    if [ -z "$selection" ] || [ "$selection" == "0" ]; then
-        echo "[Info] 操作已取消，返回主菜单。"
-        return
-    fi
+    if [ -z "$selection" ] || [ "$selection" == "0" ]; then return; fi
 
     parse_selection "$selection"
-
     if [ ${#selected_indices[@]} -lt 2 ]; then 
-        echo "[Info] 选择文件不足，无法拼接。"
+        echo "[Info] 选择文件不足。"
         read -p "按回车继续..." 
         return
     fi
@@ -135,17 +142,12 @@ task_concat() {
     read -p "按回车返回菜单..."
 }
 
-# 2. 转换 MP4
 task_convert() {
     print_file_list || return
     echo -e "\033[36m[模式 2] 转 MP4 (+faststart)\033[0m"
-    # --- 改进点 ---
     read -p "请输入文件编号 (输入 0 或回车返回菜单): " selection
 
-    if [ -z "$selection" ] || [ "$selection" == "0" ]; then
-        echo "[Info] 操作已取消。"
-        return
-    fi
+    if [ -z "$selection" ] || [ "$selection" == "0" ]; then return; fi
 
     parse_selection "$selection"
     if [ ${#selected_indices[@]} -eq 0 ]; then return; fi
@@ -164,21 +166,14 @@ task_convert() {
     read -p "按回车返回菜单..."
 }
 
-# 3. 删除
 task_delete() {
     print_file_list || return
-    echo -e "\033[31m[模式 3] 删除文件 (不可恢复)\033[0m"
-    # --- 改进点 ---
+    echo -e "\033[31m[模式 3] 删除文件\033[0m"
     read -p "请输入编号 (输入 0 或回车返回菜单): " selection
     
-    # --- 改进点：空值/取消检测 ---
-    if [ -z "$selection" ] || [ "$selection" == "0" ]; then
-        echo "[Info] 删除操作已取消。"
-        return
-    fi
+    if [ -z "$selection" ] || [ "$selection" == "0" ]; then return; fi
 
     parse_selection "$selection"
-    
     if [ ${#selected_indices[@]} -eq 0 ]; then return; fi
 
     del_list=()
@@ -189,16 +184,13 @@ task_delete() {
     done
 
     echo "----------------------------------------"
-    echo "即将删除以下 ${#del_list[@]} 个文件："
+    echo "即将删除 ${#del_list[@]} 个文件："
     for f in "${del_list[@]}"; do echo " - $f"; done
     echo "----------------------------------------"
 
-    # 删除操作需要更严格的确认，这里不接受空回车
-    read -p "输入 'yes' 确认删除，输入其他内容取消: " confirm
+    read -p "输入 'yes' 确认删除: " confirm
     if [ "$confirm" == "yes" ]; then
         for f in "${del_list[@]}"; do rm "$f"; echo "[Deleted] $f"; done
-    else
-        echo "[Info] 取消删除。"
     fi
     read -p "按回车返回菜单..."
 }
@@ -210,14 +202,14 @@ init_workspace
 while true; do
     clear
     echo "=========================================="
-    echo "      Video Master v4.0 (VPS Edition)     "
+    echo "      Video Master v5.0 (Smart Path)      "
     echo "=========================================="
     echo " 当前目录: $CURRENT_WORK_DIR"
     echo "------------------------------------------"
     echo " 1. 拼接视频 (Concat ${TARGET_EXT})"
     echo " 2. 转换 MP4 (Web Optimized)"
     echo " 3. 删除文件 (Delete)"
-    echo " 4. 切换目录 (Change Dir)"
+    echo " 4. 切换目录 (当前已记忆)"
     echo " 5. 退出 (Exit)"
     echo "=========================================="
     read -p "选择: " opt
