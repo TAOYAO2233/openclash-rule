@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # ==============================================================================
-# 脚本名称: Video Master Tool v7.1 (Bugfix Edition)
-# 修复内容: 修复了子菜单文字不显示的问题 (Stdout Capture Fix)。
+# 脚本名称: Video Master Tool v8.0 (Smart Naming Edition)
+# 更新日志:
+#   v8.0: 优化拼接命名规则 -> "提取的日期 + 原始标题(去除时间戳)"
 # ==============================================================================
 
 # --- 全局配置 ---
 LIST_FILE="concat_list.txt"
 CONFIG_FILE="$HOME/.video_master_last_path"
 CURRENT_WORK_DIR=""
-# 定义“所有格式”包含的扩展名
 ALL_VIDEO_EXTS="@(flv|mp4|mkv|ts|mov|avi|wmv|m4v)"
 
 # --- 基础工具 ---
@@ -101,7 +101,6 @@ parse_selection() {
     done
 }
 
-# --- 修复后的子菜单 (使用 >&2 输出 UI) ---
 select_extension_menu() {
     echo "----------------------------" >&2
     echo "请选择目标文件的格式:" >&2
@@ -111,8 +110,6 @@ select_extension_menu() {
     echo " 4. 所有视频 (All)" >&2
     echo "----------------------------" >&2
     read -p "选择 [1-4] (默认 All): " ext_choice
-    
-    # 仅将结果输出到 Stdout，供变量捕获
     case $ext_choice in
         1) echo "flv";;
         2) echo "mp4";;
@@ -125,7 +122,6 @@ select_extension_menu() {
 
 task_concat() {
     echo -e "\033[36m[模式 1: 拼接视频]\033[0m"
-    # 调用子菜单，UI 显示在屏幕，结果存入变量
     local target_type=$(select_extension_menu)
     
     print_file_list_ui "$target_type" || { read -p "按回车返回..."; return; }
@@ -150,12 +146,48 @@ task_concat() {
         fi
     done
 
-    date_str=$(echo "$first_file" | grep -oE '[0-9]{4}[-_.]?[0-9]{2}[-_.]?[0-9]{2}' | head -n 1)
+    # ==========================
+    # v8.0 新增: 智能命名逻辑
+    # ==========================
+    
+    # 1. 获取纯文件名 (去除后缀)
+    base_name="${first_file%.*}"
+    
+    # 2. 提取日期 (格式如 2025-12-25 或 20251225)
+    date_str=$(echo "$base_name" | grep -oE '[0-9]{4}[-_.]?[0-9]{2}[-_.]?[0-9]{2}' | head -n 1)
     [ -z "$date_str" ] && date_str="Merged_$(date +%Y%m%d)"
+    
+    # 3. 提取标题 (去除时间戳部分)
+    # 逻辑: 使用 sed 去除开头的 [xxxx-xx-xx ...] 块，或者去除 date_str 本身
+    # -E 's/^\[[0-9].*?\]//' 匹配以 [数字 开头的第一个中括号块并移除
+    title_part=$(echo "$base_name" | sed -E 's/^\[[0-9][^]]*\]//')
+    
+    # 如果处理后没有变化（说明不是 [时间]标题 格式），则尝试手动去除日期字符串
+    if [ "$title_part" == "$base_name" ]; then
+        title_part=$(echo "$base_name" | sed "s/$date_str//g" | sed -E 's/^[-_.]+//')
+    fi
+    
+    # 获取输出后缀
     output_ext="${first_file##*.}"
-    output_name="${date_str}_merged.${output_ext}"
+    
+    # 4. 组合最终文件名: 日期 + _ + 剩余标题
+    # 如果 title_part 不为空，加个下划线连接，否则只用日期
+    if [ -n "$title_part" ]; then
+        # 移除 title_part 开头可能残留的空格或特殊字符
+        output_name="${date_str}_${title_part}.${output_ext}"
+    else
+        output_name="${date_str}_merged.${output_ext}"
+    fi
 
-    echo "[Info] 正在拼接..."
+    # 清理文件名中的双下划线 (美观)
+    output_name=$(echo "$output_name" | sed 's/__/_/g')
+
+    echo "------------------------------------------------"
+    echo "[Info] 正在拼接 (Stream Copy)..."
+    echo "[Info] 源文件: $first_file"
+    echo -e "\033[32m[Info] 输出名: $output_name\033[0m"
+    echo "------------------------------------------------"
+    
     ffmpeg -y -f concat -safe 0 -i "$LIST_FILE" -c copy "$output_name"
     
     [ $? -eq 0 ] && rm "$LIST_FILE" && echo -e "\033[32m[Success] 完成\033[0m"
@@ -224,7 +256,7 @@ init_workspace
 while true; do
     clear
     echo "=========================================="
-    echo "      Video Master v7.1 (Bugfix)          "
+    echo "      Video Master v8.0 (Smart Rename)    "
     echo "=========================================="
     echo " 当前目录: $CURRENT_WORK_DIR"
     echo "------------------------------------------"
