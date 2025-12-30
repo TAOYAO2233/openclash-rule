@@ -82,13 +82,13 @@ display_and_ask_update() {
   fi
 }
 
-# 获取视频文件
+# 【优化】获取视频文件 - 失败时返回 1 而不是 exit
 get_video_files() {
   local selected_ext="$1"
   # 检查目录是否存在
   if [ ! -d "$VIDEO_DIR" ]; then
       echo "错误：目录 $VIDEO_DIR 不存在！"
-      exit 1
+      return 1
   fi
 
   echo "正在扫描文件，请稍候..."
@@ -99,8 +99,7 @@ get_video_files() {
   fi
   
   if [ ${#VIDEO_FILES[@]} -eq 0 ]; then
-      echo "未找到任何视频文件！"
-      exit 1
+      return 1 # 没找到文件，返回错误代码，由主循环处理
   fi
 }
 
@@ -128,8 +127,45 @@ select_file_type() {
   fi
 }
 
-# 缓存视频信息（简化版，仅在需要时查询以加快启动速度）
-# 原脚本一次性ffprobe所有文件太慢，这里改为列表显示时不查时长，推流时再查
+# 【优化】扫描循环逻辑 - 没找到文件时允许重试
+scan_files_loop() {
+  while true; do
+    select_file_type
+    
+    # 检查是否找到了文件
+    if [ ${#VIDEO_FILES[@]} -gt 0 ]; then
+      echo "成功找到 ${#VIDEO_FILES[@]} 个视频文件。"
+      break
+    else
+      echo "----------------------------------------"
+      echo "警告：在目录 [$VIDEO_DIR] 中未找到任何视频文件！"
+      echo "请选择下一步操作："
+      echo "r) 重新选择文件类型 (Retry)"
+      echo "c) 修改视频目录路径 (Change Directory)"
+      echo "q) 退出脚本 (Quit)"
+      read -rp "请输入选项 [默认r]: " retry_opt
+      
+      case $retry_opt in
+        c|C)
+           read -rp "请输入新的视频目录: " new_dir
+           if [ -n "$new_dir" ]; then
+               set_config_value "VIDEO_DIR" "$new_dir"
+               load_config
+               echo "目录已更新，准备重新扫描..."
+           fi
+           ;;
+        q|Q)
+           echo "已退出。"
+           exit 0
+           ;;
+        *)
+           echo "准备重新扫描..."
+           ;;
+      esac
+    fi
+    echo "----------------------------------------"
+  done
+}
 
 # 显示列表并选择
 list_and_select_videos() {
@@ -147,7 +183,6 @@ list_and_select_videos() {
     [ $end -ge $num_files ] && end=$(( num_files - 1 ))
 
     for i in $(seq "$start" "$end"); do
-      # 仅显示文件名，避免卡顿
       filename=$(basename "${VIDEO_FILES[$i]}")
       echo "$((i + 1))) $filename"
     done
@@ -175,12 +210,10 @@ list_and_select_videos() {
         ;;
       *)
         if [[ "$input" =~ ^[0-9,\-]+$ ]]; then
-            # 解析简单的数字输入
             IFS=',' read -r -a inputs <<< "$input"
             SELECTED_FILES=()
             for item in "${inputs[@]}"; do
                 if [[ $item =~ ([0-9]+)-([0-9]+) ]]; then
-                    # 处理范围例如 5-7
                     for ((j=${BASH_REMATCH[1]}; j<=${BASH_REMATCH[2]}; j++)); do
                         idx=$((j-1))
                         if (( idx >= 0 && idx < num_files )); then
@@ -198,7 +231,7 @@ list_and_select_videos() {
             if [ ${#SELECTED_FILES[@]} -gt 0 ]; then
                 break
             else
-                read -rp "输入无效，按回车继续..." 
+                read -rp "输入无效或未选中文件，按回车继续..." 
             fi
         fi
         ;;
@@ -216,15 +249,15 @@ ask_loop() {
 stream_videos() {
   local total_files=${#SELECTED_FILES[@]}
   if [[ $total_files -eq 0 ]]; then
+    # 这里其实理论上不会走到，因为 list_and_select_videos 保证了选择
     echo "未选择文件，退出。"
     exit 1
   fi
   
-  # 询问转码模式
   echo "----------------------------------------"
   echo "推流模式选择："
   echo "1) 快速模式 (-c copy) : CPU占用低，要求源文件为 h264/aac"
-  echo "2) 兼容模式 (-c:v libx264 -c:a aac) : CPU占用高，兼容所有格式"
+  echo "2) 兼容模式 (-c:v libx264...) : CPU占用高，兼容所有格式"
   read -rp "请选择 [默认1]: " stream_mode
   
   local ffmpeg_opts="-c copy"
@@ -237,34 +270,25 @@ stream_videos() {
     for video in "${SELECTED_FILES[@]}"; do
       echo "正在分析文件时长..."
       local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$video" | awk '{printf "%d", $1}')
-      
-      # 如果获取失败，默认为0，防止计算报错
       [ -z "$duration" ] && duration=0
-      
       local duration_fmt=$(printf '%02d:%02d:%02d' $((duration/3600)) $(((duration%3600)/60)) $((duration%60)))
       
       echo -e "\n=== 开始推流 ($current_index/$total_files) ==="
       echo "文件: $(basename "$video")"
       echo "时长: $duration_fmt"
       echo "模式: $ffmpeg_opts"
-      echo "日志: $LOG_FILE"
       
       local progress_file=$(mktemp)
-      
-      # 启动 ffmpeg
       ffmpeg -re -i "$video" $ffmpeg_opts -f flv "$RTMP_URL" -progress "$progress_file" >> "$LOG_FILE" 2>&1 &
       local pid=$!
       
-      # 进度条循环
       while kill -0 $pid 2>/dev/null; do
         if [[ -f $progress_file ]]; then
-          # 优化 grep 获取最后一行有效时间
           local ms=$(grep -a "out_time_ms=" "$progress_file" | tail -n 1 | cut -d= -f2)
           if [[ "$ms" =~ ^[0-9]+$ ]]; then
              local sec=$((ms / 1000000))
              local pct=0
              [ $duration -gt 0 ] && pct=$((sec * 100 / duration))
-             
              local elap_fmt=$(printf '%02d:%02d:%02d' $((sec/3600)) $(((sec%3600)/60)) $((sec%60)))
              echo -ne "\r>> 进度: $elap_fmt / $duration_fmt ($pct%)  "
           fi
@@ -274,14 +298,11 @@ stream_videos() {
       
       rm -f "$progress_file"
       echo -e "\n完成."
-      
       sleep "$INTERVAL"
       ((current_index++))
     done
     
-    if [[ $LOOP == false ]]; then
-      break
-    fi
+    if [[ $LOOP == false ]]; then break; fi
     echo "=== 列表播放结束，正在重新开始循环 ==="
     sleep 2
   done
@@ -291,8 +312,10 @@ stream_videos() {
 initialize_config
 load_config
 display_and_ask_update
-select_file_type
-# cache_video_info # 移除此步，改为推流时实时获取，避免大量文件时启动极慢
+
+# 【修改】调用新的扫描循环
+scan_files_loop 
+
 list_and_select_videos
 ask_loop
 stream_videos
