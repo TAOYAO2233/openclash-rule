@@ -1,38 +1,39 @@
 #!/bin/bash
 
-# 配置文件路径
+# ================= 配置区域 =================
 CONFIG_FILE="$HOME/.stream_config"
-FILES_PER_PAGE=10 # 每页显示的文件数量
+FILES_PER_PAGE=10
 LOG_DIR="/var/log/stream_logs/"
+# 确保日志文件名合法，避免空格
 LOG_FILE="${LOG_DIR}stream_log_$(date +'%Y%m%d_%H%M%S').log"
-INTERVAL=10 # 推流间隔，秒
-LOOP=false # 是否循环推流
+INTERVAL=10
+LOOP=false
+# ===========================================
 
-# 支持的视频文件扩展名及说明
+# 支持的视频文件扩展名说明
 declare -A FILE_TYPES
 FILE_TYPES=(
-  [mp4]="MP4 (.mp4) - 通用格式，支持高质量的视频和音频，广泛用于流媒体和下载。"
-  [avi]="AVI (.avi) - 一种较旧的格式，支持高质量视频，但文件通常较大。"
-  [mkv]="MKV (.mkv) - 高度灵活的格式，支持多种音频和字幕轨道，常用于存储高质量的视频内容。"
-  [mov]="MOV (.mov) - 苹果公司开发的格式，通常用于高质量视频，广泛用于视频编辑。"
-  [flv]="FLV (.flv) - 用于流媒体视频的格式，曾经在Flash视频中非常流行。"
-  [wmv]="WMV (.wmv) - 微软开发的视频格式，通常用于Windows平台。"
-  [webm]="WebM (.webm) - 开放格式，专为Web视频流媒体设计，支持现代浏览器。"
+  [mp4]="MP4 - 通用格式"
+  [avi]="AVI - 老旧格式"
+  [mkv]="MKV - 多轨道封装"
+  [mov]="MOV - Apple格式"
+  [flv]="FLV - 流媒体格式"
+  [wmv]="WMV - 微软格式"
+  [webm]="WebM - Web格式"
 )
 
-# RTMP 服务器地址和流密钥
 RTMP_URL=""
-
-# 视频文件目录
 VIDEO_DIR=""
 
-# 创建日志目录（如果不存在）
+# 创建日志目录
 mkdir -p "$LOG_DIR"
 
 # 获取配置值的函数
 get_config_value() {
   local key="$1"
-  grep "^$key=" "$CONFIG_FILE" | cut -d'=' -f2
+  if [ -f "$CONFIG_FILE" ]; then
+    grep "^$key=" "$CONFIG_FILE" | cut -d'=' -f2
+  fi
 }
 
 # 设置配置值的函数
@@ -46,11 +47,11 @@ set_config_value() {
   fi
 }
 
-# 初始化配置文件（如果不存在）
+# 初始化配置
 initialize_config() {
   if [[ ! -f "$CONFIG_FILE" ]]; then
     echo "配置文件不存在，正在初始化..."
-    read -rp "请输入 RTMP 服务器地址和流密钥 (格式: rtmp://server/live/stream-key): " RTMP_URL
+    read -rp "请输入 RTMP 服务器地址 (格式: rtmp://server/live/stream-key): " RTMP_URL
     echo "RTMP_URL=$RTMP_URL" > "$CONFIG_FILE"
     read -rp "请输入视频文件目录: " VIDEO_DIR
     echo "VIDEO_DIR=$VIDEO_DIR" >> "$CONFIG_FILE"
@@ -63,259 +64,235 @@ load_config() {
   VIDEO_DIR=$(get_config_value "VIDEO_DIR")
 }
 
-# 显示当前配置并询问是否更新
+# 显示当前配置
 display_and_ask_update() {
-  local base_url stream_key formatted_key
-  read -r base_url stream_key <<< "$(parse_rtmp_url "$RTMP_URL")"
-  formatted_key=$(format_stream_key "$stream_key")
-  echo "*** 当前配置 ***"
-  echo "RTMP 服务器地址: $base_url"
-  echo "流密钥: $formatted_key"
-  echo "视频文件目录: $VIDEO_DIR"
-  read -rp "是否要更新配置？(y/n): " update_choice
+  echo "========================================"
+  echo "当前推流地址: $RTMP_URL"
+  echo "视频源目录:   $VIDEO_DIR"
+  echo "========================================"
+  read -rp "是否修改配置？(y/n) [默认n]: " update_choice
   if [[ $update_choice =~ ^[yY]$ ]]; then
-    read -rp "请输入新的 RTMP 服务器地址: " new_base_url
-    read -rp "请输入新的流密钥: " new_stream_key
-    set_config_value "RTMP_URL" "$new_base_url/$new_stream_key"
+    read -rp "请输入新的完整 RTMP 地址: " new_url
+    [ -n "$new_url" ] && set_config_value "RTMP_URL" "$new_url"
     
-    read -rp "请输入新的视频文件目录: " new_video_dir
-    set_config_value "VIDEO_DIR" "$new_video_dir"
+    read -rp "请输入新的视频目录: " new_dir
+    [ -n "$new_dir" ] && set_config_value "VIDEO_DIR" "$new_dir"
     
     load_config
   fi
 }
 
-# 分割 RTMP 地址和流密钥
-parse_rtmp_url() {
-  local url="$1"
-  local base_url=$(echo "$url" | sed 's:/[^/]*$::')
-  local stream_key=$(echo "$url" | awk -F'/' '{print $NF}')
-  echo "$base_url"
-  echo "$stream_key"
-}
-
-# 不再隐藏流密钥，直接返回
-format_stream_key() {
-  local stream_key="$1"
-  echo "$stream_key"
-}
-
 # 获取视频文件
 get_video_files() {
   local selected_ext="$1"
-  local ext_pattern="*.$selected_ext"
-  if [[ "$selected_ext" == "all" ]]; then
-    ext_pattern="*.{mp4,flv,mkv,avi,mov,wmv,webm}"
+  # 检查目录是否存在
+  if [ ! -d "$VIDEO_DIR" ]; then
+      echo "错误：目录 $VIDEO_DIR 不存在！"
+      exit 1
   fi
 
-  mapfile -t VIDEO_FILES < <(find "$VIDEO_DIR" -type f \( -name "*.mp4" -o -name "*.flv" -o -name "*.mkv" -o -name "*.avi" -o -name "*.mov" -o -name "*.wmv" -o -name "*.webm" \))
+  echo "正在扫描文件，请稍候..."
+  if [[ "$selected_ext" == "all" ]]; then
+    mapfile -t VIDEO_FILES < <(find "$VIDEO_DIR" -type f \( -name "*.mp4" -o -name "*.flv" -o -name "*.mkv" -o -name "*.avi" -o -name "*.mov" -o -name "*.wmv" -o -name "*.webm" \) | sort)
+  else
+    mapfile -t VIDEO_FILES < <(find "$VIDEO_DIR" -type f -name "*.$selected_ext" | sort)
+  fi
+  
+  if [ ${#VIDEO_FILES[@]} -eq 0 ]; then
+      echo "未找到任何视频文件！"
+      exit 1
+  fi
 }
 
 # 文件类型选择
 select_file_type() {
-  echo "选择要推流的文件类型："
+  echo "----------------------------------------"
+  echo "选择要扫描的文件类型："
   local index=1
-  for ext in "${!FILE_TYPES[@]}"; do
-    echo "$index) ${FILE_TYPES[$ext]}"
+  local ext_keys=("${!FILE_TYPES[@]}") # 获取所有键
+  
+  for ext in "${ext_keys[@]}"; do
+    echo "$index) $ext (${FILE_TYPES[$ext]})"
     ((index++))
   done
-  echo "$index) 全部选择"
+  echo "$index) 全部类型"
   
-  while true; do
-    read -rp "请选择文件类型（输入数字，回车默认全部选择）: " choice
-    if [[ -z $choice ]]; then
-      # 没有输入，默认选择全部
+  read -rp "请输入选项数字 [默认全部]: " choice
+  if [[ -z $choice || $choice -eq $index ]]; then
       get_video_files "all"
-      break
-    elif [[ $choice =~ ^[0-9]+$ ]]; then
-      if (( choice == index )); then
-        get_video_files "all"
-        break
-      elif (( choice > 0 && choice < index )); then
-        local selected_ext=$(printf '%s\n' "${!FILE_TYPES[@]}" | sed -n "${choice}p")
-        get_video_files "$selected_ext"
-        break
-      else
-        echo "无效选择，请重新选择。"
-      fi
-    else
-      echo "无效选择，请重新选择。"
-    fi
-  done
+  elif [[ $choice =~ ^[0-9]+$ ]] && (( choice > 0 && choice < index )); then
+      local selected_ext="${ext_keys[$((choice-1))]}"
+      get_video_files "$selected_ext"
+  else
+      get_video_files "all"
+  fi
 }
 
-# 获取视频文件信息并缓存
-cache_video_info() {
-  video_info=()
-  for file in "${VIDEO_FILES[@]}"; do
-    size=$(du -h "$file" | cut -f1)
-    duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$file" | awk '{printf "%d", $1}')
-    video_info+=("$file (大小: $size, 时长: ${duration}s)")
-  done
-}
+# 缓存视频信息（简化版，仅在需要时查询以加快启动速度）
+# 原脚本一次性ffprobe所有文件太慢，这里改为列表显示时不查时长，推流时再查
 
-# 显示视频文件列表并获取用户输入
+# 显示列表并选择
 list_and_select_videos() {
   local page=1
   local total_pages
   local num_files=${#VIDEO_FILES[@]}
-  total_pages=$(( (num_files + FILES_PER_PAGE - 1) / FILES_PER_PAGE ))
-
+  
   while true; do
+    total_pages=$(( (num_files + FILES_PER_PAGE - 1) / FILES_PER_PAGE ))
     clear
-    echo "可用的视频文件（第 $page 页，共 $total_pages 页）："
-
+    echo "=== 视频文件列表 (页码: $page / $total_pages | 总数: $num_files) ==="
+    
     local start=$(( (page - 1) * FILES_PER_PAGE ))
     local end=$(( start + FILES_PER_PAGE - 1 ))
-    end=$(( end < num_files ? end : num_files - 1 ))
+    [ $end -ge $num_files ] && end=$(( num_files - 1 ))
 
     for i in $(seq "$start" "$end"); do
-      echo "$((i + 1))) ${video_info[$i]}"
+      # 仅显示文件名，避免卡顿
+      filename=$(basename "${VIDEO_FILES[$i]}")
+      echo "$((i + 1))) $filename"
     done
     
-    echo "a) 选择所有视频"
-    echo "↑/↓) 上一页/下一页"
-    echo "q) 退出"
+    echo "----------------------------------------"
+    echo "操作指令："
+    echo "[n] 下一页  [p] 上一页  [a] 全选所有"
+    echo "[数字] 选择特定文件 (例如: 1,3,5-7)"
+    echo "[q] 退出"
+    echo "----------------------------------------"
     
-    # 新增输入提示
-    echo "输入视频文件编号（多个用逗号分隔），按回车确认，或按上下箭头键选择页面："
-	
-    # 读取单个字符输入
-    read -s -n 1 key
-
-    case $key in
-      q)
-        echo "退出程序。"
-        exit 0
-        ;;
-      a)
+    read -rp "请输入指令: " input
+    
+    case $input in
+      q|Q) exit 0 ;;
+      a|A) 
         SELECTED_FILES=("${VIDEO_FILES[@]}")
-        break
+        break 
         ;;
-      A) # 上一页（↑ 键）
-        if (( page > 1 )); then
-          ((page--))
-        fi
+      n|N) 
+        if (( page < total_pages )); then ((page++)); fi 
         ;;
-      B) # 下一页（↓ 键）
-        if (( page < total_pages )); then
-          ((page++))
-        fi
+      p|P) 
+        if (( page > 1 )); then ((page--)); fi 
         ;;
-      [0-9])
-        # 获取数字并允许用户输入多选，例如：1,3,5
-        read -p "$key" -e user_input
-        IFS=',' read -r -a indices <<< "$key$user_input"
-        SELECTED_FILES=()
-        for index in "${indices[@]}"; do
-          index=$((index - 1))
-          if ((index >= 0 && index < ${#VIDEO_FILES[@]})); then
-            SELECTED_FILES+=("${VIDEO_FILES[$index]}")
-          else
-            echo "无效的文件编号: $((index + 1))"
-          fi
-        done
-        if [[ ${#SELECTED_FILES[@]} -eq 0 ]]; then
-          echo "没有选择任何有效的视频文件。"
-          continue
+      *)
+        if [[ "$input" =~ ^[0-9,\-]+$ ]]; then
+            # 解析简单的数字输入
+            IFS=',' read -r -a inputs <<< "$input"
+            SELECTED_FILES=()
+            for item in "${inputs[@]}"; do
+                if [[ $item =~ ([0-9]+)-([0-9]+) ]]; then
+                    # 处理范围例如 5-7
+                    for ((j=${BASH_REMATCH[1]}; j<=${BASH_REMATCH[2]}; j++)); do
+                        idx=$((j-1))
+                        if (( idx >= 0 && idx < num_files )); then
+                            SELECTED_FILES+=("${VIDEO_FILES[$idx]}")
+                        fi
+                    done
+                else
+                    idx=$((item-1))
+                    if (( idx >= 0 && idx < num_files )); then
+                        SELECTED_FILES+=("${VIDEO_FILES[$idx]}")
+                    fi
+                fi
+            done
+            
+            if [ ${#SELECTED_FILES[@]} -gt 0 ]; then
+                break
+            else
+                read -rp "输入无效，按回车继续..." 
+            fi
         fi
-        break
         ;;
     esac
   done
-
-  # 自定义排序部分保持不变
-  if [[ ${#SELECTED_FILES[@]} -gt 1 ]]; then
-    read -rp "是否自定义排序？(y/n): " sort_choice
-    if [[ $sort_choice =~ ^[yY]$ ]]; then
-      echo "请输入自定义排序的文件编号，用逗号分隔："
-      read -rp "输入文件编号（例如：1,3,2）： " custom_sort
-      IFS=',' read -r -a sorted_indices <<< "$custom_sort"
-      SELECTED_FILES=()
-      for index in "${sorted_indices[@]}"; do
-        index=$((index - 1))
-        if ((index >= 0 && index < ${#VIDEO_FILES[@]})); then
-          SELECTED_FILES+=("${VIDEO_FILES[$index]}")
-        else
-          echo "无效的文件编号: $((index + 1))"
-        fi
-      done
-    fi
-  fi
 }
 
-
-# 询问是否循环推流
+# 询问循环
 ask_loop() {
-  read -rp "是否要循环推流？(y/n): " loop_choice
-  if [[ $loop_choice =~ ^[yY]$ ]]; then
-    LOOP=true
-  fi
+  read -rp "是否循环推流？(y/n) [默认n]: " loop_choice
+  [[ $loop_choice =~ ^[yY]$ ]] && LOOP=true
 }
 
-# 推流视频函数
+# 推流主逻辑
 stream_videos() {
-  local file_index=1
   local total_files=${#SELECTED_FILES[@]}
   if [[ $total_files -eq 0 ]]; then
-    echo "没有选择任何视频文件，退出程序。" | tee -a "$LOG_FILE"
+    echo "未选择文件，退出。"
     exit 1
   fi
+  
+  # 询问转码模式
+  echo "----------------------------------------"
+  echo "推流模式选择："
+  echo "1) 快速模式 (-c copy) : CPU占用低，要求源文件为 h264/aac"
+  echo "2) 兼容模式 (-c:v libx264 -c:a aac) : CPU占用高，兼容所有格式"
+  read -rp "请选择 [默认1]: " stream_mode
+  
+  local ffmpeg_opts="-c copy"
+  if [[ "$stream_mode" == "2" ]]; then
+      ffmpeg_opts="-c:v libx264 -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -c:a aac -b:a 128k -ar 44100"
+  fi
 
-  while [[ $LOOP == true || $file_index -le $total_files ]]; do
+  while true; do
+    local current_index=1
     for video in "${SELECTED_FILES[@]}"; do
+      echo "正在分析文件时长..."
       local duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nk=1:nw=1 "$video" | awk '{printf "%d", $1}')
-      local duration_formatted=$(printf '%02d:%02d:%02d' $((duration/3600)) $(((duration%3600)/60)) $((duration%60)))
       
-      echo "开始推流视频: $video (进度: $file_index/$total_files, 时长: $duration_formatted)" | tee -a "$LOG_FILE"
+      # 如果获取失败，默认为0，防止计算报错
+      [ -z "$duration" ] && duration=0
       
-      # 创建一个临时文件用于存储进度信息
+      local duration_fmt=$(printf '%02d:%02d:%02d' $((duration/3600)) $(((duration%3600)/60)) $((duration%60)))
+      
+      echo -e "\n=== 开始推流 ($current_index/$total_files) ==="
+      echo "文件: $(basename "$video")"
+      echo "时长: $duration_fmt"
+      echo "模式: $ffmpeg_opts"
+      echo "日志: $LOG_FILE"
+      
       local progress_file=$(mktemp)
       
-      # 推流并输出进度到临时文件
-      ffmpeg -re -i "$video" -c copy -f flv "$RTMP_URL" -progress "$progress_file" 2>> "$LOG_FILE" &
+      # 启动 ffmpeg
+      ffmpeg -re -i "$video" $ffmpeg_opts -f flv "$RTMP_URL" -progress "$progress_file" >> "$LOG_FILE" 2>&1 &
+      local pid=$!
       
-      # 获取进程ID
-      local ffmpeg_pid=$!
-      
-      # 实时读取并显示进度
-      while kill -0 $ffmpeg_pid 2>/dev/null; do
+      # 进度条循环
+      while kill -0 $pid 2>/dev/null; do
         if [[ -f $progress_file ]]; then
-          local progress=$(grep -E '^out_time_ms=' "$progress_file" | tail -1)
-          if [[ -n $progress ]]; then
-            local out_time_ms=$(echo "$progress" | cut -d'=' -f2)
-            local out_time_sec=$((out_time_ms / 1000000))
-            local elapsed_formatted=$(printf '%02d:%02d:%02d' $((out_time_sec/3600)) $(((out_time_sec%3600)/60)) $((out_time_sec%60)))
-            local remaining_sec=$((duration - out_time_sec))
-            local remaining_formatted=$(printf '%02d:%02d:%02d' $((remaining_sec/3600)) $(((remaining_sec%3600)/60)) $((remaining_sec%60)))
-            echo -ne "\r推流进度: $elapsed_formatted / $duration_formatted (剩余: $remaining_formatted)"
+          # 优化 grep 获取最后一行有效时间
+          local ms=$(grep -a "out_time_ms=" "$progress_file" | tail -n 1 | cut -d= -f2)
+          if [[ "$ms" =~ ^[0-9]+$ ]]; then
+             local sec=$((ms / 1000000))
+             local pct=0
+             [ $duration -gt 0 ] && pct=$((sec * 100 / duration))
+             
+             local elap_fmt=$(printf '%02d:%02d:%02d' $((sec/3600)) $(((sec%3600)/60)) $((sec%60)))
+             echo -ne "\r>> 进度: $elap_fmt / $duration_fmt ($pct%)  "
           fi
         fi
         sleep 1
       done
       
-      # 删除临时文件
       rm -f "$progress_file"
+      echo -e "\n完成."
       
-      echo "" # 换行
-      echo "完成推流视频: $video (进度: $file_index/$total_files)" | tee -a "$LOG_FILE"
       sleep "$INTERVAL"
-      ((file_index++))
+      ((current_index++))
     done
+    
     if [[ $LOOP == false ]]; then
       break
     fi
+    echo "=== 列表播放结束，正在重新开始循环 ==="
+    sleep 2
   done
 }
 
-
-
-# 主程序部分调用缓存函数
+# 执行流程
 initialize_config
 load_config
 display_and_ask_update
 select_file_type
-cache_video_info  # 添加此步骤来缓存视频信息
+# cache_video_info # 移除此步，改为推流时实时获取，避免大量文件时启动极慢
 list_and_select_videos
 ask_loop
 stream_videos
