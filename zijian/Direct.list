@@ -2,6 +2,7 @@
 
 # MyList
 # 域名后缀匹配
+DOMAIN-SUFFIX,naiyous.com
 DOMAIN-SUFFIX,time.windows.com
 DOMAIN-SUFFIX,girigirilove.com
 DOMAIN-SUFFIX,lanzov.com
@@ -14,7 +15,7 @@ DOMAIN-SUFFIX,webgl3d.cn
 # 域名关键字匹配
 DOMAIN-KEYWORD,baidu
 DOMAIN-KEYWORD,girigirilove
-DOMAIN-SUFFIX,girigirilove.top
+DOMAIN-KEYWORD,girigirilove.top
 DOMAIN-KEYWORD,webgl3d
 # IP段匹配
 IP-CIDR,219.146.1.66/32,no-resolve
