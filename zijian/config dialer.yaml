@@ -202,6 +202,7 @@ proxy-groups:
   - {name: 🚀 节点选择, type: select, proxies: [🔗 链式代理, 🏠 住宅链式代理, 🛫 前置节点, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🎯 全球直连]}
   - {name: 🏠 住宅代理, type: select, proxies: [🏠 住宅链式代理, 🔗 链式代理, 🚀 节点选择]}
   - {name: 🔞 PikPak, type: select, include-all: true, filter: "(🇸🇬|新加坡|SG[A-Z]?|Singapore|狮城|原生)"}
+  - {name: 🔞🈲㊙️ SQ(R18), type: select, include-all: true, filter: "^((?!(🇯🇵|JP|Japan|日本|东京|大阪|埼玉)).)*$"}
   - {name: 📹 YouTube,<<: *pr}
   - {name: 🍀 Google,<<: *pr}
   - {name: 🤖 ChatGPT,<<: *pr}
@@ -240,7 +241,7 @@ rules:
   - RULE-SET,zhuzhaidaili,🏠 住宅代理
   - RULE-SET,ai,🤖 ChatGPT
   - RULE-SET,pikpak,🔞 PikPak
-  - RULE-SET,sq,🔞🈲㊙️ SQ(R18)
+  - RULE-SET,r18sq,🔞🈲㊙️ SQ(R18)
   - RULE-SET,github_domain,👨🏿‍💻 GitHub
   - RULE-SET,apple_domain,🍎 Apple
   - RULE-SET,youtube_domain,📹 YouTube
@@ -271,6 +272,7 @@ rule-providers:
   zijiandirect: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/Direct.list"}
   proxylite: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/ProxyLite.list"}
   zhuzhaidaili: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/zhuzhaidaili.list"}
+  r18sq: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/R18(sq).list"}
   ai: { <<: *domain, url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs" }
   pikpak: {<<: *class, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/PikPak/PikPak.list"}
   youtube_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}
