@@ -240,6 +240,7 @@ rules:
   - RULE-SET,zhuzhaidaili,🏠 住宅代理
   - RULE-SET,ai,🤖 ChatGPT
   - RULE-SET,pikpak,🔞 PikPak
+  - RULE-SET,sq,🔞🈲㊙️ SQ(R18)
   - RULE-SET,github_domain,👨🏿‍💻 GitHub
   - RULE-SET,apple_domain,🍎 Apple
   - RULE-SET,youtube_domain,📹 YouTube
