@@ -202,10 +202,10 @@ proxy-groups:
   - {name: 🚀 节点选择, type: select, proxies: [🔗 链式代理, 🏠 住宅链式代理, 🛫 前置节点, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🎯 全球直连]}
   - {name: 🏠 住宅代理, type: select, proxies: [🏠 住宅链式代理, 🔗 链式代理, 🚀 节点选择]}
   - {name: 🔞 PikPak, type: select, include-all: true, filter: "(🇸🇬|新加坡|SG[A-Z]?|Singapore|狮城|原生)"}
-  - {name: 🔞🈲㊙️ SQ(R18), type: select, include-all: true, filter: "^((?!(🇯🇵|JP|Japan|日本|东京|大阪|埼玉)).)*$"}
+  - {name: 🔞🈲㊙️ SQ(R18), type: select, include-all: true, filter: "^((?!(🇯🇵|JP|Japan|日本|东京|大阪|埼玉)).)*$|♻️ 自动选择|♻️ 香港自动"}
   - {name: 📹 YouTube,<<: *pr}
   - {name: 🍀 Google,<<: *pr}
-  - {name: 🤖 ChatGPT,<<: *pr}
+  - {name: 🤖 AI,<<: *pr}
   - {name: 👨🏿‍💻 GitHub,<<: *pr}
   - {name: 🐬 OneDrive,<<: *pr}
   - {name: 🪟 Microsoft,<<: *pr}
@@ -239,7 +239,7 @@ rules:
   - RULE-SET,zijiandirect,🎯 全球直连
   - RULE-SET,proxylite,🚀 节点选择
   - RULE-SET,zhuzhaidaili,🏠 住宅代理
-  - RULE-SET,ai,🤖 ChatGPT
+  - RULE-SET,ai,🤖 AI
   - RULE-SET,pikpak,🔞 PikPak
   - RULE-SET,r18sq,🔞🈲㊙️ SQ(R18)
   - RULE-SET,github_domain,👨🏿‍💻 GitHub
