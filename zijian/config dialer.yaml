@@ -1,52 +1,45 @@
 # 机场订阅，名称不能重复
 proxy-providers:
   Airport1: # 机场名称可以更改
-    url: "#订阅地址链接"
-    type: http
+    url: ""
+    type: http  # 【获取方式】指定通过 HTTP(S) 协议拉取配置
     interval: 86400 # 更新间隔单位秒
     health-check:
-      enable: true
+      enable: true  # 是否启用自动心跳检测
       url: https://www.gstatic.com/generate_204
-      interval: 120
-      tolerance: 50
-      timeout: 5000
-      max-failed-times: 5
+      interval: 120 # 每隔***秒执行一次检测
+      tolerance: 50 # 【容差】单位为毫秒。只有当新测得延迟与原延迟差值超过此值时，才更新节点状态
+      timeout: 5000 # 超时时间，超过 5 秒未响应则判定为节点失效
+      max-failed-times: 5  # 最大失败次数，超过此次数则判定为节点失效
     proxy: 直连 # 更新选用的节点
     header:
-      User-Agent:
+      User-Agent: # 自定义 UA 标识，部分机场后端会根据 UA 返回不同格式（如 Clash/Mihomo 专用格式）
         - "clash"
         - "mihomo"
         - "clash.meta"
     override:  #额外设置
-      udp: true
-      down: "300 Mbps"
-      up: "50 Mbps"
-      skip-cert-verify: true  #跳过证书验证
+      udp: true # 强制开启所有节点的 UDP 支持（适用于游戏或语音通话）
+      #xudp: false
+      down: "800 Mbps"   # 模拟设置节点的下行带宽限制（仅作元数据展示或流控参考）
+      up: "50 Mbps" # 模拟设置节点的上行带宽限制
+      skip-cert-verify: true  # 【安全性跳过】忽略 TLS 证书验证，防止因证书过期或 SNI 阻断导致无法连接（生产环境需谨慎）
 
   provider1:
-    type: inline
+    type: inline  # 【类型：内联】不同于 http 远程拉取，此处节点信息直接写在配置文件中
     override:
-      dialer-proxy: 🛫 前置节点
+      dialer-proxy: 🛫 前置节点 # 【链式代理/隧道】此设置最为关键。
+    # 它意味着：在连接下面 payload 中的任何节点时，流量都会先经过“🛫 前置节点”。
+    # 物理路径：客户端 -> 🛫 前置节点 -> payload 里的落地节点 -> 目标网站。
+    # 这通常用于“中转”或“隧道”架构，保护落地 IP 或优化跨境链路。
     payload:
-      - { name: "ss美国西雅图落地", type: "ss", server: "", port: 443, cipher: "", password: "" }
-      - { name: "ss美国Buffalo落地", type: "ss", server: "", port: 443, cipher: "", password: "" }
+      - { name: "", type: "ss", server: "", port: 26363, cipher: "", password: "" }
 
 
 # global-ua: clash.meta
 
 # 节点信息
 proxies: 
-  - name: "住宅IP"          # 节点名称，勿与任何 proxy-group 同名
-    dialer-proxy: 🛫 住宅前置节点
-    type: socks5
-    server: 00.00.00.00  # 服务器地址
-    port: 443              # 端口
-    username: "000"  # 用户名
-    password: "000"   # 密码
-    udp: false              # 开启 UDP
-  
-  - {name: 直连, type: direct}
-
+    - {name: 直连, type: direct}
 
 
 
@@ -93,7 +86,7 @@ geo-url:  # GEO地址
 # external-ui-url: "https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip"
 
 # 嗅探
-sniffer:
+sniffer:  # 流量嗅探：通过解析握手包提取真实域名，解决加密 SNI 前的域名识别问题
   enable: true
   sniff:
     HTTP:
@@ -105,7 +98,7 @@ sniffer:
       ports: [443, 8443]
   force-domain:
     - "+.v2ex.com"
-  skip-domain:
+  skip-domain:  # 排除特定域名，不进行嗅探解析
     - "rule-set:private_domain,cn_domain"
     - "dlg.io.mi.com"
     - "+.push.apple.com"
@@ -121,9 +114,9 @@ sniffer:
     - "+.msftncsi.com"
 
 # 入站
-tun:
+tun:  # 透明代理模式
   enable: true
-  stack: mixed      # system/gvisor/mixed
+  stack: mixed      # （system/gvisor/mixed）混合协议栈（gVisor + System），平衡性能与稳定性
   dns-hijack: ["any:53", "tcp://any:53"]
   auto-route: true    # 自动路由
   auto-redirect: true   # 自动重定向
@@ -153,19 +146,18 @@ dns:
     - "+.ntp1.aliyun.com"
     - "+.ntp.ntsc.ac.cn"
     - "+.cn.ntp.org.cn"
-  default-nameserver:
+  default-nameserver:         # 默认 DNS，仅用于解析非域名匹配的请求
     - 223.5.5.5
   direct-nameserver:
     - 223.5.5.5
   direct-nameserver-follow-policy: false
-  proxy-server-nameserver:    #解析节点域名
+  proxy-server-nameserver:    # 用于解析代理节点的域名，必须确保其稳定且不走代理
     - 223.5.5.5
-    - 223.6.6.6
     - https://dns.alidns.com/dns-query
   nameserver-policy:
     '+.baidu.com': '114.114.114.114'
     "rule-set:private_domain,cn_domain":
-      - 223.5.5.5
+      - https://dns.alidns.com/dns-query
       - 223.6.6.6
     "rule-set:gfw_domain,geolocation-!cn":
       - "https://cloudflare-dns.com/dns-query"
@@ -174,12 +166,13 @@ dns:
       - tls://1.1.1.1#🚀 节点选择&h3=true
   # namesever尽量用运营商提供的DNS
   nameserver:
-    - 223.5.5.5
-    - 223.6.6.6
-    - 114.114.114.114
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
   fallback:
-    - tls://8.8.4.4
-    - tls://1.1.1.1
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - https://dns.google/dns-query
   fallback-filter:
     geoip: true
     geoip-code: CN
@@ -202,7 +195,7 @@ proxy-groups:
   - {name: 🚀 节点选择, type: select, proxies: [🔗 链式代理, 🏠 住宅链式代理, 🛫 前置节点, 🛬 落地节点, 🔯 香港故转, 🔯 日本故转, ♻️ 香港自动, ♻️ 日本自动, ♻️ 美国自动, ♻️ 自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇺🇲 美国节点, 🌐 全部节点, 🎯 全球直连]}
   - {name: 🏠 住宅代理, type: select, proxies: [🏠 住宅链式代理, 🔗 链式代理, 🚀 节点选择]}
   - {name: 🔞 PikPak, type: select, include-all: true, filter: "(🇸🇬|新加坡|SG[A-Z]?|Singapore|狮城|原生)"}
-  - {name: 🔞🈲㊙️ SQ(R18), type: select, include-all: true, filter: "^((?!(🇯🇵|JP|Japan|日本|东京|大阪|埼玉)).)*$|♻️ 自动选择|♻️ 香港自动"}
+  - {name: 🔞🈲㊙️ SQ(R18), type: select, include-all: true, filter: "^(♻️ 自动选择|♻️ 香港自动)$|^(?!(.*(🇯🇵|JP|Japan|日本|东京|大阪|埼玉))).*$"} 
   - {name: 📹 YouTube,<<: *pr}
   - {name: 🍀 Google,<<: *pr}
   - {name: 🤖 AI,<<: *pr}
@@ -213,13 +206,13 @@ proxy-groups:
   - {name: 📲 Telegram,<<: *pr}
   - {name: 🎥 NETFLIX,<<: *pr}
   - {name: ✈️ Speedtest,<<: *pr}
-  - {name: 💶 PayPal,<<: *pr}
+  - {name: 💶 PayPal,<<: *pr} 
   - {name: 🍎 Apple, type: select, proxies: [直连, 🚀 节点选择]}
   - {name: 🎯 全球直连, type: select, proxies: [直连]}
   - {name: 🐟 漏网之鱼,<<: *pr}
-  - {name: 🛫 前置节点, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, 🔯 香港故转]}
+  - {name: 🛫 前置节点, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, ♻️ 美国自动, 🔯 香港故转]}
   - {name: 🛬 落地节点, type: select, use: ["provider1"]}
-  - {name: 🛫 住宅前置节点, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, 🔯 香港故转]}
+  - {name: 🛫 住宅前置节点, type: select, include-all: true, proxies: [♻️ 自动选择, ♻️ 香港自动, ♻️ 美国自动, 🔯 香港故转]}
   - {name: 🏠 住宅IP, type: select, include-all: true, filter: "(?i)住宅|zhuzhai|residential"}
   - {name: 🇭🇰 香港节点, type: select, include-all: true, filter: "(?i)港|hk|hongkong|hong kong"}
   - {name: 🇯🇵 日本节点, type: select, include-all: true, filter: "(?i)日|jp|japan"}
@@ -228,7 +221,7 @@ proxy-groups:
   - {name: 🔯 日本故转, type: fallback, include-all: true, tolerance: 20, interval: 120, filter: "(?=.*(日|JP|(?i)Japan))^((?!(港|台|韩|新|美)).)*$" }
   - {name: ♻️ 香港自动, type: url-test, include-all: true, tolerance: 20, interval: 120, filter: "(?=.*(港|HK|(?i)Hong))^((?!(台|日|韩|新|深|美)).)*$"}
   - {name: ♻️ 日本自动, type: url-test, include-all: true, tolerance: 20, interval: 120, filter: "(?=.*(日|JP|(?i)Japan))^((?!(港|台|韩|新|美)).)*$" }
-  - {name: ♻️ 美国自动, type: url-test, include-all: true, tolerance: 20, interval: 120, filter: "(?=.*(美|US|(?i)States|America))^((?!(港|台|日|韩|新)).)*$"}
+  - {name: ♻️ 美国自动, type: url-test, include-all: true, tolerance: 20, interval: 120, filter: "(?=.*(美|US|(?i)States|America))^((?!(港|台|日|韩|新|(?i)^ss)).)*$"}
   - {name: ♻️ 自动选择, type: url-test, include-all: true, tolerance: 20, interval: 120, filter: "^((?!(直连|住宅IP|SS)).)*$"}
   - {name: 🌐 全部节点, type: select, include-all: true}
 
@@ -258,7 +251,7 @@ rules:
   - RULE-SET,google_ip,🍀 Google,no-resolve
   - RULE-SET,netflix_ip,🎥 NETFLIX,no-resolve
   - RULE-SET,telegram_ip,📲 Telegram,no-resolve
-  - RULE-SET,cn_ip,🎯 全球直连
+  - RULE-SET,cn_ip,🎯 全球直连,no-resolve
   - MATCH,🐟 漏网之鱼
 
 
