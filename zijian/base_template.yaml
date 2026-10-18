@@ -1,0 +1,122 @@
+# ==============================================================================
+# Subconverter 专用 Clash 基础模板 (base_template.yaml)
+# 包含防 DNS 泄露的 Fake-IP DNS 模块、TUN 模式及流量嗅探设置
+# 配合 custom.ini 中的 clash_rule_base 使用
+# ==============================================================================
+
+port: 7890
+socks-port: 7891
+redir-port: 7892
+mixed-port: 7893
+tproxy-port: 7894
+allow-lan: true
+bind-address: "*"
+ipv6: false
+unified-delay: false
+tcp-concurrent: true
+log-level: warning
+mode: rule
+find-process-mode: 'off'
+global-client-fingerprint: chrome
+keep-alive-idle: 600
+keep-alive-interval: 30
+disable-keep-alive: false
+
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+geo-auto-update: true
+geo-auto-update-interval: 48
+geo-url:
+  geoip: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip.dat"
+  geosite: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite.dat"
+  mmdb: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geo.mmdb"
+  asn: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/asn.mmdb"
+
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  force-domain:
+    - "+.v2ex.com"
+  skip-domain:
+    - "rule-set:private_domain"
+    - "rule-set:cn_domain"
+    - "dlg.io.mi.com"
+    - "+.push.apple.com"
+    - "+.apple.com"
+    - "+.wechat.com"
+    - "+.qpic.cn"
+    - "+.qq.com"
+    - "+.wechatapp.com"
+    - "+.vivox.com"
+    - "+.oray.com"
+    - "+.sunlogin.net"
+    - "+.msftconnecttest.com"
+    - "+.msftncsi.com"
+
+tun:
+  enable: true
+  stack: mixed
+  dns-hijack: ["any:53", "tcp://any:53"]
+  auto-route: true
+  auto-redirect: true
+  auto-detect-interface: true
+  route-exclude-address-set:
+    - "rule-set:cn_ip"
+
+dns:
+  enable: true
+  listen: 0.0.0.0:7874
+  ipv6: false
+  respect-rules: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter-mode: blacklist
+  fake-ip-filter:
+    - "rule-set:private_domain"
+    - "rule-set:cn_domain"
+    - "+.services.googleapis.cn"
+    - "+.xn--ngstr-lra8j.com"
+    - "*.lan"
+    - "*.local"
+    - "time.*.com"
+    - "+.pool.ntp.org"
+    - "+.ntp.tencent.com"
+    - "+.ntp1.aliyun.com"
+    - "+.ntp.ntsc.ac.cn"
+    - "+.cn.ntp.org.cn"
+    - "+.msftconnecttest.com"
+    - "+.msftncsi.com"
+  
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+  direct-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  direct-nameserver-follow-policy: false
+
+  nameserver-policy:
+    '+.baidu.com': '223.5.5.5'
+    "rule-set:private_domain,cn_domain":
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
+
+  nameserver:
+    - "https://dns.google/dns-query#🚀 节点选择"
+    - "https://cloudflare-dns.com/dns-query#🚀 节点选择"
+    - "tls://8.8.4.4#🚀 节点选择"
+    - "tls://1.1.1.1#🚀 节点选择"
