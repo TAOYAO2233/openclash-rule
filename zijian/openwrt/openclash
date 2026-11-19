@@ -340,7 +340,7 @@ config authentication
 	option name '自建'
 	option address '订阅网址'
 	option template '0'
-	option custom_template_url 'https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/zijian.ini'
+	option custom_template_url 'https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/subconverter/zijian.ini'
 	option skip_cert_verify 'true'
 	list ex_keyword '重置'
 	list ex_keyword '剩余'

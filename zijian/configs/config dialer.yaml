@@ -262,10 +262,10 @@ rule-anchor:
   class: &class {type: http, interval: 86400, behavior: classical, format: text}
 rule-providers: 
   private_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"}
-  zijiandirect: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/Direct.list"}
-  proxylite: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/ProxyLite.list"}
-  zhuzhaidaili: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/zhuzhaidaili.list"}
-  r18sq: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/R18(sq).list"}
+  zijiandirect: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/rules/Direct.list"}
+  proxylite: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/rules/ProxyLite.list"}
+  zhuzhaidaili: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/rules/zhuzhaidaili.list"}
+  r18sq: {<<: *class, url: "https://raw.githubusercontent.com/TAOYAO2233/openclash-rule/refs/heads/main/zijian/rules/R18(sq).list"}
   ai: { <<: *domain, url: "https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-chat-!cn.mrs" }
   pikpak: {<<: *class, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/PikPak/PikPak.list"}
   youtube_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}
